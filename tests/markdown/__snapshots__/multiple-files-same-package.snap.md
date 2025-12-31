@@ -5,9 +5,10 @@
 <details open><summary>src/file2.py</summary>
 
 ```python
-  1 🔳
-  2 🔳
-  3 🟨
+  1 🔳 value1 = 1
+  2 🔳 value2 = 2
+  3 🟨 value3 = 3
+...
 ```
 </details>
 

@@ -9,8 +9,8 @@ const COVERAGE_ICONS = {
 
 /** Options for markdown generation */
 export type MarkdownOptions = {
-  /** Number of context lines to show before and after uncovered lines (default: 1) */
-  contextLines?: number
+  /** Number of lines to show before and after uncovered lines (default: 1) */
+  numberOfSurroundingLines?: number
 }
 
 /**
@@ -18,10 +18,15 @@ export type MarkdownOptions = {
  * This is a pure function suitable for snapshot testing.
  *
  * @param report - The normalized coverage report
+ * @param fileContents - Map of filepath to array of line contents
  * @param options - Optional configuration for markdown generation
  * @returns Markdown string representation
  */
-export function generateMarkdown(report: CoverageReport, options: MarkdownOptions = {}): string {
+export function generateMarkdown(
+  report: CoverageReport,
+  fileContents: Map<string, string[]>,
+  options: MarkdownOptions = {},
+): string {
   const sections: string[] = []
 
   // Add coverage badges at the top
@@ -32,7 +37,7 @@ export function generateMarkdown(report: CoverageReport, options: MarkdownOption
 
   // Generate per-package sections (skip packages with no uncovered lines)
   for (const pkg of report.packages) {
-    const section = generatePackageSection(pkg, options)
+    const section = generatePackageSection(pkg, fileContents, options)
     if (section !== null) {
       sections.push(section)
     }
@@ -60,7 +65,11 @@ function hasUncoveredLines(file: FileCoverage): boolean {
  * Generate a markdown section for a single package.
  * Returns null if the package has no files with uncovered lines.
  */
-function generatePackageSection(pkg: PackageCoverage, options: MarkdownOptions): string | null {
+function generatePackageSection(
+  pkg: PackageCoverage,
+  fileContents: Map<string, string[]>,
+  options: MarkdownOptions,
+): string | null {
   // Filter to only files with uncovered lines
   const filesWithUncovered = pkg.files.filter(hasUncoveredLines)
 
@@ -88,7 +97,8 @@ function generatePackageSection(pkg: PackageCoverage, options: MarkdownOptions):
 
   // Generate file sections only for files with uncovered lines
   for (const file of filesWithUncovered) {
-    lines.push(generateFileSection(file, options))
+    const content = fileContents.get(file.filename) ?? []
+    lines.push(generateFileSection(file, content, options))
   }
 
   return lines.join('\n')
@@ -97,7 +107,7 @@ function generatePackageSection(pkg: PackageCoverage, options: MarkdownOptions):
 /**
  * Generate a collapsible markdown section for a single file.
  */
-function generateFileSection(file: FileCoverage, options: MarkdownOptions): string {
+function generateFileSection(file: FileCoverage, fileLines: string[], options: MarkdownOptions): string {
   const lines: string[] = []
 
   // Start collapsible details section
@@ -107,7 +117,7 @@ function generateFileSection(file: FileCoverage, options: MarkdownOptions): stri
   // Generate code block with coverage annotations
   const extension = getFileExtension(file.filename)
   lines.push('```' + extension)
-  lines.push(generateAnnotatedLines(file.lines, options))
+  lines.push(generateAnnotatedLines(file.lines, fileLines, options))
   lines.push('```')
 
   lines.push('</details>')
@@ -120,12 +130,12 @@ function generateFileSection(file: FileCoverage, options: MarkdownOptions): stri
  * Only shows uncovered/partial lines with configurable context lines around them.
  * Uses smart ellipsis handling: shows single lines instead of "..." when gap is small.
  */
-function generateAnnotatedLines(coverageLines: LineCoverage[], options: MarkdownOptions): string {
+function generateAnnotatedLines(coverageLines: LineCoverage[], fileLines: string[], options: MarkdownOptions): string {
   if (coverageLines.length === 0) {
     return '(no coverage data)'
   }
 
-  const contextLines = options.contextLines ?? 1
+  const numberOfSurroundingLines = options.numberOfSurroundingLines ?? 1
   const sortedLines = [...coverageLines].sort((a, b) => a.lineNumber - b.lineNumber)
 
   // Create a map for quick line lookup
@@ -145,8 +155,8 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], options: Markdown
   // Expand to include context lines around interesting lines
   const linesToShow = new Set<number>()
   for (const lineNum of interestingLineNumbers) {
-    // Add context before
-    for (let i = lineNum - contextLines; i <= lineNum + contextLines; i++) {
+    // Add context before and after
+    for (let i = lineNum - numberOfSurroundingLines; i <= lineNum + numberOfSurroundingLines; i++) {
       if (lineMap.has(i)) {
         linesToShow.add(i)
       }
@@ -156,7 +166,28 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], options: Markdown
   // Convert to sorted array
   const linesToShowArray = [...linesToShow].sort((a, b) => a - b)
 
+  // Helper to get line content from fileLines (1-indexed to 0-indexed)
+  const getLineContent = (lineNum: number): string => {
+    const index = lineNum - 1
+    if (index >= 0 && index < fileLines.length) {
+      return fileLines[index] ?? ''
+    }
+    return ''
+  }
+
   const outputLines: string[] = []
+
+  // Determine the first and last line numbers in coverage data for ellipsis detection
+  const minLineInData = sortedLines[0]?.lineNumber ?? 1
+  const maxLineInData = sortedLines[sortedLines.length - 1]?.lineNumber ?? 1
+  const firstLineToShow = linesToShowArray[0] ?? minLineInData
+  const lastLineToShow = linesToShowArray[linesToShowArray.length - 1] ?? maxLineInData
+
+  // Add leading ellipsis if there's content before the first shown line
+  if (firstLineToShow > 1) {
+    outputLines.push('...')
+  }
+
   let prevLineNumber = -1
 
   for (const lineNum of linesToShowArray) {
@@ -167,27 +198,35 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], options: Markdown
     if (prevLineNumber !== -1 && lineNum > prevLineNumber + 1) {
       const gapSize = lineNum - prevLineNumber - 1
 
-      // If gap is just 1 line and that line exists in our data, show it instead of "..."
+      // If gap is just 1 line, show the actual line (if we have content for it)
       if (gapSize === 1) {
         const gapLineNum = prevLineNumber + 1
         const gapLine = lineMap.get(gapLineNum)
         if (gapLine) {
           const gapIcon = COVERAGE_ICONS[gapLine.state]
           const gapLineNumStr = gapLineNum.toString().padStart(3, ' ')
-          outputLines.push(`${gapLineNumStr} ${gapIcon}`)
+          const gapContent = getLineContent(gapLineNum)
+          outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
         } else {
           outputLines.push('...')
         }
       } else {
+        // 2+ line gap: show single ellipsis
         outputLines.push('...')
       }
     }
 
     const icon = COVERAGE_ICONS[line.state]
     const lineNumStr = lineNum.toString().padStart(3, ' ')
-    outputLines.push(`${lineNumStr} ${icon}`)
+    const content = getLineContent(lineNum)
+    outputLines.push(`${lineNumStr} ${icon} ${content}`)
 
     prevLineNumber = lineNum
+  }
+
+  // Add trailing ellipsis if there's content after the last shown line
+  if (lastLineToShow < fileLines.length) {
+    outputLines.push('...')
   }
 
   return outputLines.join('\n')

@@ -44,8 +44,19 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   // Merge all reports into one
   const mergedReport = mergeReports(reports)
 
+  // Collect all unique file paths from the report
+  const filePaths = new Set<string>()
+  for (const pkg of mergedReport.packages) {
+    for (const file of pkg.files) {
+      filePaths.add(file.filename)
+    }
+  }
+
+  // Read file contents from disk
+  const fileContents = await readFileContents([...filePaths])
+
   // Generate markdown
-  const markdown = generateMarkdown(mergedReport)
+  const markdown = generateMarkdown(mergedReport, fileContents)
 
   // Calculate overall metrics for outputs
   const overallMetrics = calculateOverallMetrics(mergedReport)
@@ -149,11 +160,28 @@ async function findPullRequestNumber(octokit: Octokit, context: Context): Promis
     commit_sha: context.sha,
   })
 
-  if (pulls.length > 0) {
-    return pulls[0].number
+  return pulls[0]?.number ?? null
+}
+
+/**
+ * Read file contents from disk for a list of file paths.
+ * Returns a map of filepath -> lines array.
+ * Files that don't exist return empty arrays.
+ */
+async function readFileContents(filepaths: string[]): Promise<Map<string, string[]>> {
+  const contents = new Map<string, string[]>()
+
+  for (const filepath of filepaths) {
+    try {
+      const content = await fs.readFile(filepath, 'utf-8')
+      contents.set(filepath, content.split('\n'))
+    } catch {
+      // File doesn't exist or can't be read - use empty array
+      contents.set(filepath, [])
+    }
   }
 
-  return null
+  return contents
 }
 
 const COMMENT_MARKER = '<!-- pr-code-coverage-visualizer -->'

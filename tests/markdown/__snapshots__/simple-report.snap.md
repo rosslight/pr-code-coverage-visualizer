@@ -5,9 +5,11 @@
 <details open><summary>src/example.ts</summary>
 
 ```typescript
-  2 🟩
-  3 🔳
-  4 🟨
+...
+  2 🟩 const value2 = 2;
+  3 🔳 const value3 = 3;
+  4 🟨 const value4 = 4;
+...
 ```
 </details>
 

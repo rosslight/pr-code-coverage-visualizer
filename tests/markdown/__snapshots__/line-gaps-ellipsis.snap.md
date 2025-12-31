@@ -5,10 +5,12 @@
 <details open><summary>src/gaps.rs</summary>
 
 ```rust
- 10 🔳
- 11 🔳
 ...
- 50 🟨
+ 10 🔳 let value10 = 10;
+ 11 🔳 let value11 = 11;
+...
+ 50 🟨 let value50 = 50;
+...
 ```
 </details>
 

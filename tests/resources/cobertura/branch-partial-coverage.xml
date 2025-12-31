@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="1.0" branch-rate="0.5" lines-covered="3" lines-valid="3" branches-covered="2" branches-valid="4">
+  <packages>
+    <package name="branch.partial" line-rate="1.0" branch-rate="0.5" complexity="2">
+      <classes>
+        <class name="PartialBranchClass" filename="src/branch-partial.ts" line-rate="1.0" branch-rate="0.5" complexity="2">
+          <lines>
+            <line number="1" hits="5" branch="False" />
+            <line number="2" hits="3" branch="True" condition-coverage="50% (1/2)" />
+            <line number="3" hits="2" branch="True" condition-coverage="25% (1/4)" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

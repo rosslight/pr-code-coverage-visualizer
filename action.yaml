@@ -1,14 +1,30 @@
-name: coverage-diff-viewer
-description: Take generated code coverage files, and show a preview of uncovered lines
+name: pr-code-coverage-visualizer
+description: Take generated code coverage files and visualize uncovered lines in a PR comment
 
 inputs:
-  name:
-    description: Example
+  files:
+    description: One or multiple coverage files. Can be multiple lines. Glob patterns are supported.
     required: true
+  update-comment:
+    description: Whether to update an existing comment instead of creating a new one
+    required: false
+    default: 'true'
+  path-glob:
+    description: Select subdirectories to show coverage data for
+    required: false
+    default: ''
   token:
-    description: GitHub token
+    description: GitHub token for API access
     required: true
     default: ${{ github.token }}
+
+outputs:
+  line-coverage:
+    description: The overall line coverage percentage
+  function-coverage:
+    description: The overall function coverage percentage
+  branch-coverage:
+    description: The overall branch coverage percentage
 
 runs:
   using: 'node20'

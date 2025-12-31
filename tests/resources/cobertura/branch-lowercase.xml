@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="1.0" branch-rate="0.75" lines-covered="3" lines-valid="3" branches-covered="3" branches-valid="4">
+  <packages>
+    <package name="branch.lowercase" line-rate="1.0" branch-rate="0.75" complexity="2">
+      <classes>
+        <class name="LowercaseBranchClass" filename="src/branch-lowercase.ts" line-rate="1.0" branch-rate="0.75" complexity="2">
+          <lines>
+            <line number="1" hits="5" branch="false" />
+            <line number="2" hits="3" branch="true" condition-coverage="100% (2/2)" />
+            <line number="3" hits="2" branch="true" condition-coverage="50% (1/2)" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

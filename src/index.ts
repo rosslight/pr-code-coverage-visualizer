@@ -5,7 +5,9 @@ import { run } from './run.js'
 try {
   await run(
     {
-      name: core.getInput('name', { required: true }),
+      files: core.getInput('files', { required: true }),
+      updateComment: core.getBooleanInput('update-comment'),
+      pathGlob: core.getInput('path-glob'),
     },
     getOctokit(),
     await getContext(),

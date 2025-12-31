@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.8" branch-rate="0.5" lines-covered="4" lines-valid="5" branches-covered="1" branches-valid="2">
+  <packages>
+    <package name="merge.priority" line-rate="0.8" branch-rate="0.5" complexity="3">
+      <classes>
+        <!-- First class: line 5 is not-covered -->
+        <class name="ClassOne" filename="src/priority.ts" line-rate="0.5" branch-rate="0" complexity="1">
+          <lines>
+            <line number="1" hits="0" branch="False" />
+            <line number="5" hits="0" branch="False" />
+          </lines>
+        </class>
+        <!-- Second class: line 5 is partial (should win over not-covered) -->
+        <class name="ClassTwo" filename="src/priority.ts" line-rate="1.0" branch-rate="0.5" complexity="1">
+          <lines>
+            <line number="5" hits="1" branch="True" condition-coverage="50% (1/2)" />
+            <line number="10" hits="3" branch="False" />
+          </lines>
+        </class>
+        <!-- Third class: line 5 is covered (should win over partial) -->
+        <class name="ClassThree" filename="src/priority.ts" line-rate="1.0" branch-rate="1.0" complexity="1">
+          <lines>
+            <line number="5" hits="2" branch="True" condition-coverage="100% (2/2)" />
+            <line number="15" hits="1" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

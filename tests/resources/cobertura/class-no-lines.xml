@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0" branch-rate="0" lines-covered="0" lines-valid="0" branches-covered="0" branches-valid="0">
+  <packages>
+    <package name="no.lines" line-rate="0" branch-rate="0" complexity="0">
+      <classes>
+        <class name="EmptyClass" filename="src/empty.ts" line-rate="0" branch-rate="0" complexity="0">
+          <lines>
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

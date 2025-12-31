@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="1.0" branch-rate="0.6" lines-covered="6" lines-valid="6" branches-covered="6" branches-valid="10">
+  <packages>
+    <package name="condition.formats" line-rate="1.0" branch-rate="0.6" complexity="6">
+      <classes>
+        <class name="ConditionFormatsClass" filename="src/conditions.ts" line-rate="1.0" branch-rate="0.6" complexity="6">
+          <lines>
+            <!-- Standard format: percentage with fraction -->
+            <line number="1" hits="5" branch="True" condition-coverage="100% (2/2)" />
+            <line number="2" hits="3" branch="True" condition-coverage="50% (1/2)" />
+            <line number="3" hits="2" branch="True" condition-coverage="0% (0/2)" />
+            <!-- Multi-branch conditions -->
+            <line number="4" hits="4" branch="True" condition-coverage="75% (3/4)" />
+            <line number="5" hits="1" branch="True" condition-coverage="33% (2/6)" />
+            <!-- Edge case: very low percentage -->
+            <line number="6" hits="1" branch="True" condition-coverage="1% (1/100)" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

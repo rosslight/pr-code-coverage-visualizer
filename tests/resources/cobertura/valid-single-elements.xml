@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="1.0" branch-rate="0" lines-covered="1" lines-valid="1" branches-covered="0" branches-valid="0">
+  <packages>
+    <package name="single" line-rate="1.0" branch-rate="0" complexity="1">
+      <classes>
+        <class name="SingleClass" filename="src/single.ts" line-rate="1.0" branch-rate="0" complexity="1">
+          <lines>
+            <line number="42" hits="7" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>
+

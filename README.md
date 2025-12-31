@@ -1,89 +1,100 @@
-# typescript-action [![ts](https://github.com/int128/typescript-action/actions/workflows/ts.yaml/badge.svg)](https://github.com/int128/typescript-action/actions/workflows/ts.yaml)
+# pr-code-coverage-visualizer [![ts](https://github.com/int128/typescript-action/actions/workflows/ts.yaml/badge.svg)](https://github.com/int128/typescript-action/actions/workflows/ts.yaml)
 
-This is a template of TypeScript action.
-Inspired from https://github.com/actions/typescript-action.
+This is a github action which is supposed to be run for a PR and visualizes the test coverage.
+
+Everytime this action is run, we add a comment to the PR showing the current coverage.
+
+If the trigger is not `pull_request`, this action does nothing. Also, if the length of the comment would exceed the GitHub limit, lines are trunctuated.
 
 ## Features
 
-- Ready to develop with the minimum configs
-  - tsconfig
-  - Biome
-  - Vitest
-- Automated continuous release
-- Keep consistency of generated files
-- Shipped with Renovate config
-
-## Getting Started
-
-Click `Use this template` to create a repository.
-
-An initial release `v0.0.0` is automatically created by GitHub Actions.
-You can see the generated files in `dist` directory on the tag.
-
-Then, checkout your repository and test it. Node.js is required.
-
-```console
-$ git clone https://github.com/your/repo.git
-
-$ pnpm i
-$ pnpm test
-```
-
-Create a pull request with your change.
-
-After merging the pull request, a new minor release (such as `v0.1.0`) is created.
-
-### Stable release
-
-When you want to create a stable release, change the major version in [release workflow](.github/workflows/release.yaml).
-
-```yaml
-- uses: int128/release-typescript-action@v1
-  with:
-    major-version: 1
-```
-
-Then a new stable release `v1.0.0` is created.
+- Accepts code coverage as one or multiple `cobertura.xml` files
+- Visualizes coverage summary and per-file annotated snippets in the pull request
 
 ## Specification
 
 To run this action, create a workflow as follows:
 
 ```yaml
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: int128/typescript-action@v1
+      # Generate coverage files
+      - name: 
+        uses: rosslight/pr-code-coverage-visualizer@v1
         with:
-          name: hello
+          files: |
+            coverage/coverage1.xml
+            coverage/coverage2.xml
+          update-comment: true
 ```
 
 ### Inputs
 
-| Name   | Default    | Description   |
-| ------ | ---------- | ------------- |
-| `name` | (required) | example input |
+| Name             | Default    | Description                                                     |
+|------------------|------------|-----------------------------------------------------------------|
+| `files`          | (required) | One or multiple files. Can be multiple lines. Glob is supported |
+| `update-comment` | true       | Visualize for changed lines only                                |
+| `path-glob`      | true       | Select subdirectories to show coverage data for                 |
 
 ### Outputs
 
-| Name      | Description    |
-| --------- | -------------- |
-| `example` | example output |
+| Name                | Description           |
+|---------------------|-----------------------|
+| `line-coverage`     | The line coverage     |
+| `function-coverage` | The function coverage |
+| `branch-coverage`   | The branch coverage   |
+
+### Example output
+
+![Function Coverage](https://img.shields.io/badge/Function%20Coverage-28.23%25-brightgreen.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-32.12%25-brightgreen.svg?style=flat)
+![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-38.89%25-brightgreen.svg?style=flat)
+
+**Uncovered files:**
+
+`My rust project` (LineCoverage: 100%, BranchCoverage: 70%)
+<details open><summary>path/to/rust/file1.rs</summary>
+
+```rs
+...
+ 9 🔳 pub fn add(a: int, b: int) -> int {
+10 🔳    return a + b
+11 🔳 }
+...
+41 🟩 pub fn add(a: int, b: int) -> int {
+42 🟩    return a + b
+43 🟩 }
+...
+```
+</details>
+
+`My .NET project` (LineCoverage: 70%, BranchCoverage: 10%)
+<details open><summary>path/to/dotnet/file1.cs</summary>
+
+```cs
+...
+ 8 🔳 pub int add(int a, int b)
+ 9 🔳 {
+10 🔳     return a + b
+11 🔳 }
+...
+```
+</details>
+
+🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
 
 ## Development
 
 ### Release workflow
 
-When a pull request is merged into main branch, a new minor release is created by GitHub Actions.
-See https://github.com/int128/release-typescript-action for details.
+Releases are generated from conventional commits and aggregated using release-please.
 
-### Keep consistency of generated files
-
-If a pull request needs to be fixed by Prettier, an additional commit to fix it will be added by GitHub Actions.
-See https://github.com/int128/update-generated-files-action for details.
-
-### Dependency update
-
-You can enable Renovate to update the dependencies.
-This repository is shipped with the config https://github.com/int128/typescript-action-renovate-config.
+When the release-please pull request is merged into main branch, a new release is created by GitHub Actions which includes the dist/ folder.

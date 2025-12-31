@@ -1,0 +1,12 @@
+**TestPackage** (LineCoverage: 75%, BranchCoverage: 0%)
+<details open><summary>src/example.ts</summary>
+
+```typescript
+  1 🟩
+  2 🟩
+  3 🔳
+  4 🟨
+```
+</details>
+
+🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered

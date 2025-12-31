@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.75" branch-rate="0" lines-covered="3" lines-valid="4" branches-covered="0" branches-valid="0">
+  <packages>
+    <package name="package.one" line-rate="1.0" branch-rate="0" complexity="1">
+      <classes>
+        <class name="ClassOne" filename="src/one.ts" line-rate="1.0" branch-rate="0" complexity="1">
+          <lines>
+            <line number="1" hits="5" branch="False" />
+            <line number="2" hits="3" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+    <package name="package.two" line-rate="0.5" branch-rate="0" complexity="1">
+      <classes>
+        <class name="ClassTwo" filename="src/two.ts" line-rate="0.5" branch-rate="0" complexity="1">
+          <lines>
+            <line number="1" hits="1" branch="False" />
+            <line number="2" hits="0" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+    <package name="package.three" line-rate="0" branch-rate="0" complexity="1">
+      <classes>
+        <class name="ClassThree" filename="src/three.ts" line-rate="0" branch-rate="0" complexity="1">
+          <lines>
+            <line number="1" hits="0" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

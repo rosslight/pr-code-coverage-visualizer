@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.8" branch-rate="0.5" lines-covered="4" lines-valid="5" branches-covered="2" branches-valid="4">
+  <packages>
+    <package name="branch.mixed" line-rate="0.8" branch-rate="0.5" complexity="3">
+      <classes>
+        <class name="MixedBranchClass" filename="src/branch-mixed.ts" line-rate="0.8" branch-rate="0.5" complexity="3">
+          <lines>
+            <line number="1" hits="10" branch="False" />
+            <line number="2" hits="5" branch="True" condition-coverage="100% (2/2)" />
+            <line number="3" hits="3" branch="True" condition-coverage="50% (1/2)" />
+            <line number="4" hits="0" branch="True" condition-coverage="0% (0/2)" />
+            <line number="5" hits="1" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

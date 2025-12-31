@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.7" branch-rate="0.5" lines-covered="7" lines-valid="10" branches-covered="3" branches-valid="6">
+  <packages>
+    <package name="metrics.test" line-rate="0.7" branch-rate="0.5" complexity="5">
+      <classes>
+        <class name="MetricsClass" filename="src/metrics.ts" line-rate="0.7" branch-rate="0.5" complexity="5">
+          <methods>
+            <method name="coveredMethod" signature="(): void" line-rate="1.0" branch-rate="1.0" complexity="1">
+              <lines>
+                <line number="5" hits="10" branch="False" />
+                <line number="6" hits="5" branch="False" />
+              </lines>
+            </method>
+            <method name="partialMethod" signature="(x: number): boolean" line-rate="1.0" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="10" hits="8" branch="True" condition-coverage="50% (1/2)" />
+                <line number="11" hits="4" branch="False" />
+              </lines>
+            </method>
+            <method name="uncoveredMethod" signature="(): void" line-rate="0" branch-rate="0" complexity="1">
+              <lines>
+                <line number="15" hits="0" branch="False" />
+                <line number="16" hits="0" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <!-- Covered lines -->
+            <line number="1" hits="20" branch="False" />
+            <line number="2" hits="15" branch="False" />
+            <line number="3" hits="10" branch="False" />
+            <!-- Branch with 100% coverage (covered) -->
+            <line number="4" hits="8" branch="True" condition-coverage="100% (2/2)" />
+            <!-- Branch with partial coverage -->
+            <line number="5" hits="6" branch="True" condition-coverage="50% (1/2)" />
+            <line number="6" hits="4" branch="True" condition-coverage="75% (3/4)" />
+            <!-- Not covered lines -->
+            <line number="7" hits="0" branch="False" />
+            <line number="8" hits="0" branch="False" />
+            <line number="9" hits="0" branch="False" />
+            <!-- Branch line with 0 hits -->
+            <line number="10" hits="0" branch="True" condition-coverage="0% (0/2)" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>
+

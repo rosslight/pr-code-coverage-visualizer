@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="1.0" branch-rate="0">
+  <packages>
+    <package name="broken" line-rate="1.0">
+      <classes>
+        <class name="BrokenClass" filename="src/broken.ts"
+          <!-- Missing closing tag and attributes -->
+          <lines>
+            <line number="1" hits="1"
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+<!-- Missing closing coverage tag -->

@@ -2,7 +2,6 @@
 <details open><summary>src/example.ts</summary>
 
 ```typescript
-  1 🟩
   2 🟩
   3 🔳
   4 🟨

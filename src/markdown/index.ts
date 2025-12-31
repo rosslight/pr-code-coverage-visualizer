@@ -1,1 +1,1 @@
-export { generateMarkdown } from './generator.js'
+export { generateMarkdown, type MarkdownOptions } from './generator.js'

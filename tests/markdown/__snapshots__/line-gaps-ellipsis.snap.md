@@ -2,9 +2,6 @@
 <details open><summary>src/gaps.rs</summary>
 
 ```rust
-  1 🟩
-  2 🟩
-...
  10 🔳
  11 🔳
 ...

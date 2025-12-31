@@ -7,19 +7,34 @@ const COVERAGE_ICONS = {
   'not-covered': '🔳',
 } as const
 
+/** Options for markdown generation */
+export type MarkdownOptions = {
+  /** Number of context lines to show before and after uncovered lines (default: 1) */
+  contextLines?: number
+}
+
 /**
  * Generate markdown visualization for a coverage report.
  * This is a pure function suitable for snapshot testing.
  *
  * @param report - The normalized coverage report
+ * @param options - Optional configuration for markdown generation
  * @returns Markdown string representation
  */
-export function generateMarkdown(report: CoverageReport): string {
+export function generateMarkdown(report: CoverageReport, options: MarkdownOptions = {}): string {
   const sections: string[] = []
 
-  // Generate per-package sections
+  // Generate per-package sections (skip packages with no uncovered lines)
   for (const pkg of report.packages) {
-    sections.push(generatePackageSection(pkg))
+    const section = generatePackageSection(pkg, options)
+    if (section !== null) {
+      sections.push(section)
+    }
+  }
+
+  // If no packages have uncovered lines, show a success message
+  if (sections.length === 0) {
+    return '✅ All lines are covered!'
   }
 
   // Add legend at the end
@@ -29,9 +44,25 @@ export function generateMarkdown(report: CoverageReport): string {
 }
 
 /**
- * Generate a markdown section for a single package.
+ * Check if a file has any uncovered or partial lines.
  */
-function generatePackageSection(pkg: PackageCoverage): string {
+function hasUncoveredLines(file: FileCoverage): boolean {
+  return file.lines.some((line) => line.state === 'not-covered' || line.state === 'partial')
+}
+
+/**
+ * Generate a markdown section for a single package.
+ * Returns null if the package has no files with uncovered lines.
+ */
+function generatePackageSection(pkg: PackageCoverage, options: MarkdownOptions): string | null {
+  // Filter to only files with uncovered lines
+  const filesWithUncovered = pkg.files.filter(hasUncoveredLines)
+
+  // Skip package entirely if all files are fully covered
+  if (filesWithUncovered.length === 0) {
+    return null
+  }
+
   const lines: string[] = []
 
   // Calculate aggregate metrics for the package
@@ -49,9 +80,9 @@ function generatePackageSection(pkg: PackageCoverage): string {
 
   lines.push(header)
 
-  // Generate file sections
-  for (const file of pkg.files) {
-    lines.push(generateFileSection(file))
+  // Generate file sections only for files with uncovered lines
+  for (const file of filesWithUncovered) {
+    lines.push(generateFileSection(file, options))
   }
 
   return lines.join('\n')
@@ -60,7 +91,7 @@ function generatePackageSection(pkg: PackageCoverage): string {
 /**
  * Generate a collapsible markdown section for a single file.
  */
-function generateFileSection(file: FileCoverage): string {
+function generateFileSection(file: FileCoverage, options: MarkdownOptions): string {
   const lines: string[] = []
 
   // Start collapsible details section
@@ -70,7 +101,7 @@ function generateFileSection(file: FileCoverage): string {
   // Generate code block with coverage annotations
   const extension = getFileExtension(file.filename)
   lines.push('```' + extension)
-  lines.push(generateAnnotatedLines(file.lines))
+  lines.push(generateAnnotatedLines(file.lines, options))
   lines.push('```')
 
   lines.push('</details>')
@@ -80,29 +111,77 @@ function generateFileSection(file: FileCoverage): string {
 
 /**
  * Generate annotated line content showing coverage state.
- * Groups consecutive lines and adds ellipsis for gaps.
+ * Only shows uncovered/partial lines with configurable context lines around them.
+ * Uses smart ellipsis handling: shows single lines instead of "..." when gap is small.
  */
-function generateAnnotatedLines(coverageLines: LineCoverage[]): string {
+function generateAnnotatedLines(coverageLines: LineCoverage[], options: MarkdownOptions): string {
   if (coverageLines.length === 0) {
     return '(no coverage data)'
   }
 
+  const contextLines = options.contextLines ?? 1
   const sortedLines = [...coverageLines].sort((a, b) => a.lineNumber - b.lineNumber)
-  const outputLines: string[] = []
 
+  // Create a map for quick line lookup
+  const lineMap = new Map<number, LineCoverage>()
+  for (const line of sortedLines) {
+    lineMap.set(line.lineNumber, line)
+  }
+
+  // Find all uncovered/partial lines (the "interesting" lines)
+  const interestingLineNumbers = new Set<number>()
+  for (const line of sortedLines) {
+    if (line.state === 'not-covered' || line.state === 'partial') {
+      interestingLineNumbers.add(line.lineNumber)
+    }
+  }
+
+  // Expand to include context lines around interesting lines
+  const linesToShow = new Set<number>()
+  for (const lineNum of interestingLineNumbers) {
+    // Add context before
+    for (let i = lineNum - contextLines; i <= lineNum + contextLines; i++) {
+      if (lineMap.has(i)) {
+        linesToShow.add(i)
+      }
+    }
+  }
+
+  // Convert to sorted array
+  const linesToShowArray = [...linesToShow].sort((a, b) => a - b)
+
+  const outputLines: string[] = []
   let prevLineNumber = -1
 
-  for (const line of sortedLines) {
-    // Add ellipsis if there's a gap in line numbers
-    if (prevLineNumber !== -1 && line.lineNumber > prevLineNumber + 1) {
-      outputLines.push('...')
+  for (const lineNum of linesToShowArray) {
+    const line = lineMap.get(lineNum)
+    if (!line) continue
+
+    // Check for gap and handle ellipsis
+    if (prevLineNumber !== -1 && lineNum > prevLineNumber + 1) {
+      const gapSize = lineNum - prevLineNumber - 1
+
+      // If gap is just 1 line and that line exists in our data, show it instead of "..."
+      if (gapSize === 1) {
+        const gapLineNum = prevLineNumber + 1
+        const gapLine = lineMap.get(gapLineNum)
+        if (gapLine) {
+          const gapIcon = COVERAGE_ICONS[gapLine.state]
+          const gapLineNumStr = gapLineNum.toString().padStart(3, ' ')
+          outputLines.push(`${gapLineNumStr} ${gapIcon}`)
+        } else {
+          outputLines.push('...')
+        }
+      } else {
+        outputLines.push('...')
+      }
     }
 
     const icon = COVERAGE_ICONS[line.state]
-    const lineNum = line.lineNumber.toString().padStart(3, ' ')
-    outputLines.push(`${lineNum} ${icon}`)
+    const lineNumStr = lineNum.toString().padStart(3, ' ')
+    outputLines.push(`${lineNumStr} ${icon}`)
 
-    prevLineNumber = line.lineNumber
+    prevLineNumber = lineNum
   }
 
   return outputLines.join('\n')

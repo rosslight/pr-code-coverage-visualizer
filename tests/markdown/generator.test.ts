@@ -156,18 +156,18 @@ describe('generateMarkdown', () => {
           files: [
             {
               filename: 'test.cs',
-              lines: [{ lineNumber: 1, state: 'covered' }],
-              lineMetrics: { covered: 1, total: 1 },
+              lines: [{ lineNumber: 1, state: 'not-covered' }],
+              lineMetrics: { covered: 0, total: 1 },
             },
             {
               filename: 'test.rs',
-              lines: [{ lineNumber: 1, state: 'covered' }],
-              lineMetrics: { covered: 1, total: 1 },
+              lines: [{ lineNumber: 1, state: 'not-covered' }],
+              lineMetrics: { covered: 0, total: 1 },
             },
             {
               filename: 'test.tsx',
-              lines: [{ lineNumber: 1, state: 'covered' }],
-              lineMetrics: { covered: 1, total: 1 },
+              lines: [{ lineNumber: 1, state: 'not-covered' }],
+              lineMetrics: { covered: 0, total: 1 },
             },
           ],
         },
@@ -179,17 +179,5 @@ describe('generateMarkdown', () => {
     expect(markdown).toContain('```csharp')
     expect(markdown).toContain('```rust')
     expect(markdown).toContain('```typescript')
-  })
-
-  it('includes coverage legend', () => {
-    const report: CoverageReport = {
-      packages: [],
-    }
-
-    const markdown = generateMarkdown(report)
-
-    expect(markdown).toContain('🔳 Not covered')
-    expect(markdown).toContain('🟨 Missing branch coverage')
-    expect(markdown).toContain('🟩 Covered')
   })
 })

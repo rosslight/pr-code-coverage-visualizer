@@ -24,6 +24,12 @@ export type MarkdownOptions = {
 export function generateMarkdown(report: CoverageReport, options: MarkdownOptions = {}): string {
   const sections: string[] = []
 
+  // Add coverage badges at the top
+  const badges = generateCoverageBadges(report)
+  if (badges) {
+    sections.push(badges)
+  }
+
   // Generate per-package sections (skip packages with no uncovered lines)
   for (const pkg of report.packages) {
     const section = generatePackageSection(pkg, options)
@@ -32,13 +38,13 @@ export function generateMarkdown(report: CoverageReport, options: MarkdownOption
     }
   }
 
-  // If no packages have uncovered lines, show a success message
-  if (sections.length === 0) {
-    return '✅ All lines are covered!'
+  // If only badges exist (no uncovered lines), add success message
+  if (sections.length <= 1) {
+    sections.push('✅ All lines are covered!')
+  } else {
+    // Add legend at the end
+    sections.push(generateLegend())
   }
-
-  // Add legend at the end
-  sections.push(generateLegend())
 
   return sections.join('\n\n')
 }
@@ -192,6 +198,114 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], options: Markdown
  */
 function generateLegend(): string {
   return `${COVERAGE_ICONS['not-covered']} Not covered, ${COVERAGE_ICONS.partial} Missing branch coverage, ${COVERAGE_ICONS.covered} Covered`
+}
+
+/**
+ * Generate coverage badges for the overall report.
+ * Returns badges for Line, Branch, and Function coverage if data is available.
+ */
+function generateCoverageBadges(report: CoverageReport): string | null {
+  const metrics = calculateReportMetrics(report)
+
+  // Need at least line metrics to generate badges
+  if (metrics.lineMetrics.total === 0) {
+    return null
+  }
+
+  const badges: string[] = []
+
+  // Function/Method coverage badge
+  if (metrics.methodMetrics && metrics.methodMetrics.total > 0) {
+    badges.push(generateBadge('Function Coverage', metrics.methodMetrics))
+  }
+
+  // Line coverage badge
+  badges.push(generateBadge('Line Coverage', metrics.lineMetrics))
+
+  // Branch coverage badge
+  if (metrics.branchMetrics && metrics.branchMetrics.total > 0) {
+    badges.push(generateBadge('Branch Coverage', metrics.branchMetrics))
+  }
+
+  return badges.join('\n')
+}
+
+/**
+ * Generate a single shields.io badge markdown.
+ */
+function generateBadge(label: string, metrics: CoverageMetrics): string {
+  const percent = metrics.total === 0 ? 0 : (metrics.covered / metrics.total) * 100
+  const color = getBadgeColor(percent)
+  const encodedLabel = encodeURIComponent(label)
+  const encodedValue = encodeURIComponent(`${percent.toFixed(2)}%`)
+
+  return `![${label}](https://img.shields.io/badge/${encodedLabel}-${encodedValue}-${color}.svg?style=flat)`
+}
+
+/**
+ * Get badge color based on coverage percentage.
+ */
+function getBadgeColor(percent: number): string {
+  if (percent >= 80) return 'brightgreen'
+  if (percent >= 60) return 'green'
+  if (percent >= 40) return 'yellowgreen'
+  if (percent >= 20) return 'yellow'
+  return 'red'
+}
+
+/**
+ * Calculate aggregate metrics for the entire report.
+ */
+function calculateReportMetrics(report: CoverageReport): {
+  lineMetrics: CoverageMetrics
+  branchMetrics?: CoverageMetrics
+  methodMetrics?: CoverageMetrics
+} {
+  let lineCovered = 0
+  let lineTotal = 0
+  let branchCovered = 0
+  let branchTotal = 0
+  let methodCovered = 0
+  let methodTotal = 0
+  let hasBranchData = false
+  let hasMethodData = false
+
+  for (const pkg of report.packages) {
+    for (const file of pkg.files) {
+      lineCovered += file.lineMetrics.covered
+      lineTotal += file.lineMetrics.total
+
+      if (file.branchMetrics) {
+        hasBranchData = true
+        branchCovered += file.branchMetrics.covered
+        branchTotal += file.branchMetrics.total
+      }
+
+      if (file.methodMetrics) {
+        hasMethodData = true
+        methodCovered += file.methodMetrics.covered
+        methodTotal += file.methodMetrics.total
+      }
+    }
+  }
+
+  const result: {
+    lineMetrics: CoverageMetrics
+    branchMetrics?: CoverageMetrics
+    methodMetrics?: CoverageMetrics
+  } = {
+    lineMetrics: { covered: lineCovered, total: lineTotal },
+  }
+
+  if (hasBranchData) {
+    result.branchMetrics = { covered: branchCovered, total: branchTotal }
+  }
+
+  if (hasMethodData) {
+    result.methodMetrics = { covered: methodCovered, total: methodTotal }
+  }
+
+  return result
 }
 
 /**

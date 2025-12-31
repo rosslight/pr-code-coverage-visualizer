@@ -1,0 +1,71 @@
+name: Build, test, and release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: .node-version
+      - run: npm install -g pnpm@latest-10
+      - run: pnpm i
+      - run: pnpm run check
+      - run: pnpm run test
+      - run: pnpm run build
+
+      - name: Integration test
+        uses: ./
+        with:
+          name: foo
+
+  release-please:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - uses: actions/setup-node@v6.1.0
+        with:
+          node-version-file: .node-version
+      - run: npm install -g pnpm@latest-10
+      - run: pnpm i
+      - run: pnpm run build
+      - name: Commit dist to release tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f dist/
+          git commit -m "chore: add dist for ${{ needs.release-please.outputs.tag_name }}"
+          git push origin HEAD:refs/tags/${{ needs.release-please.outputs.tag_name }} --force
+

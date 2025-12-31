@@ -1,0 +1,15 @@
+name: coverage-diff-viewer
+description: Take generated code coverage files, and show a preview of uncovered lines
+
+inputs:
+  name:
+    description: Example
+    required: true
+  token:
+    description: GitHub token
+    required: true
+    default: ${{ github.token }}
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

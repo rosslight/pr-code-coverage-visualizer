@@ -1,0 +1,20 @@
+# IDEs
+.idea/
+.vscode/
+
+# Dependency directory
+node_modules/
+
+# dotenv environment variables file
+.env
+.env.test
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Ignore built ts files
+lib/
+
+# Only release tag contains dist directory
+/dist

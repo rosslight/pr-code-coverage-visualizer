@@ -18,13 +18,13 @@ jobs:
       - run: npm install -g pnpm@latest-10
       - run: pnpm i
       - run: pnpm run check
-      - run: pnpm run test
+      - run: pnpm run test -- --coverage
       - run: pnpm run build
 
       - name: Integration test
         uses: ./
         with:
-          name: foo
+          files: coverage/cobertura-coverage.xml
 
   release-please:
     runs-on: ubuntu-latest

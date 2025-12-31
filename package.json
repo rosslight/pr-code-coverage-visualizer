@@ -22,7 +22,8 @@
     "@vercel/ncc": "0.38.4",
     "pnpm": "10.26.1",
     "typescript": "5.9.3",
-    "vitest": "4.0.16"
+    "vitest": "4.0.16",
+    "@vitest/coverage-v8": "4.0.16"
   },
   "engines": {
     "node": "20.x"

@@ -5,14 +5,34 @@ import type { ChangedLinesMap } from './model.js'
 const execAsync = promisify(exec)
 
 /**
+ * Ensure a commit SHA is available locally by fetching it if needed.
+ * This handles the common case where actions/checkout does a shallow clone.
+ *
+ * @param sha - The commit SHA to ensure is available
+ */
+async function ensureShaAvailable(sha: string): Promise<void> {
+  try {
+    // Check if the commit exists locally
+    await execAsync(`git cat-file -e ${sha}^{commit}`)
+  } catch {
+    // Commit not available locally - fetch it
+    await execAsync(`git fetch origin ${sha} --depth=1`)
+  }
+}
+
+/**
  * Get changed lines by comparing two commits using local git.
- * Requires the repository to be checked out and both SHAs to be present.
+ * Automatically fetches missing commits if needed (for shallow clones).
  *
  * @param baseSha - The base commit SHA to compare from
  * @param headSha - The head commit SHA to compare to
  * @returns Map of filename to set of changed line numbers
  */
 export async function getChangedLinesFromGit(baseSha: string, headSha: string): Promise<ChangedLinesMap> {
+  // Ensure both commits are available locally
+  await ensureShaAvailable(baseSha)
+  await ensureShaAvailable(headSha)
+
   const { stdout: diffOutput } = await execAsync(`git diff ${baseSha} ${headSha}`, {
     maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large diffs
   })

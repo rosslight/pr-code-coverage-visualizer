@@ -12,6 +12,8 @@ import { resolveFilePaths, type PathResolutionContext } from '../path/index.js'
 export type Logger = {
   info: (message: string) => void
   warning: (message: string) => void
+  /** Optional debug logging (only shown when verbose mode is enabled) */
+  debug?: (message: string) => void
 }
 
 /**
@@ -25,16 +27,10 @@ export type ProcessCoverageInputs = {
   /** Whether to filter to show only changed lines */
   showChangedLinesOnly: boolean
   /** Glob pattern to filter which files to show */
-  showGlobOnly: string
-  /**
-   * Explicit base commit SHA for comparison.
-   * When provided together with headSha, takes precedence over baseRef.
-   */
+  globPattern: string
+  /** Explicit base commit SHA for comparison */
   baseSha?: string | undefined
-  /**
-   * Explicit head commit SHA for comparison.
-   * When provided together with baseSha, takes precedence over baseRef.
-   */
+  /** Explicit head commit SHA for comparison */
   headSha?: string | undefined
 }
 
@@ -77,7 +73,8 @@ export async function processCoverage(
 
   logger.info(`Looking for coverage files matching: ${filePatterns.join(', ')}`)
 
-  const matchedFiles = (await glob(filePatterns, { absolute: true })).sort()
+  // Sort and de-duplicate matched files for deterministic CI output
+  const matchedFiles = [...new Set((await glob(filePatterns, { absolute: true })).sort())]
 
   if (matchedFiles.length === 0) {
     logger.warning('No coverage files found matching the specified patterns')
@@ -86,49 +83,39 @@ export async function processCoverage(
 
   logger.info(`Found ${matchedFiles.length} coverage file(s)`)
 
-  // Parse all coverage files
+  // Parse all coverage files with error handling
   const parser = new CoberturaCoverageParser()
   const reports: CoverageReport[] = []
 
   for (const file of matchedFiles) {
     logger.info(`Parsing: ${file}`)
-    const content = await fs.readFile(file, 'utf-8')
-    const report = await parser.parse(content)
-    reports.push(report)
+    try {
+      const content = await fs.readFile(file, 'utf-8')
+      const report = await parser.parse(content)
+      reports.push(report)
+    } catch (error) {
+      logger.warning(`Failed to parse ${file}: ${error}. Skipping.`)
+    }
+  }
+
+  // If all files failed to parse, return null
+  if (reports.length === 0) {
+    logger.warning('All coverage files failed to parse')
+    return null
   }
 
   // Merge all reports into one (including sources)
   const mergedReport = mergeReports(reports)
 
-  // Resolve file paths to get display paths and absolute paths
-  const allFilenames: string[] = []
+  // Preserve original filenames before any mutations (used for lookups and filtering)
   for (const pkg of mergedReport.packages) {
     for (const file of pkg.files) {
-      allFilenames.push(file.filename)
-    }
-  }
-
-  const pathContext: PathResolutionContext = {
-    sources: mergedReport.sources ?? [],
-    sourceDir: inputs.sourceDir,
-    logger,
-  }
-
-  logger.info(`Resolving file paths (sourceDir: ${inputs.sourceDir})...`)
-  const resolvedPaths = await resolveFilePaths(allFilenames, pathContext)
-
-  // Update file objects with resolved paths
-  for (const pkg of mergedReport.packages) {
-    for (const file of pkg.files) {
-      const resolution = resolvedPaths.get(file.filename)
-      if (resolution) {
-        file.resolvedPath = resolution.absolutePath
-        file.filename = resolution.displayPath
-      }
+      file.originalFilename = file.filename
     }
   }
 
   // Get changed lines using git if filtering is enabled and we have comparison information
+  // This must happen BEFORE filtering so we can match against original filenames
   let changedLines: ChangedLinesMap | undefined
   if (inputs.showChangedLinesOnly) {
     const { baseSha, headSha } = inputs
@@ -142,14 +129,14 @@ export async function processCoverage(
         logger.warning(`Failed to get changed lines from git: ${error}. Showing all lines.`)
       }
     } else {
-      logger.info('showChangedLinesOnly is enabled but no comparison SHAs were provided; showing all lines')
+      logger.debug?.('showChangedLinesOnly is enabled but no comparison SHAs were provided; showing all lines')
     }
   }
 
-  // Apply filters to the coverage report
+  // Apply filters to the coverage report BEFORE path resolution
   const filterContext: FilterContext = {
     options: {
-      globPattern: inputs.showGlobOnly,
+      globPattern: inputs.globPattern,
       showChangedLinesOnly: inputs.showChangedLinesOnly,
     },
     changedLines: changedLines,
@@ -161,18 +148,54 @@ export async function processCoverage(
     logger.info('Coverage report filtered based on configuration')
   }
 
-  // Collect all unique resolved file paths from the filtered report
-  // Map from display path (filename) to resolved path for reading
-  const filePathMap = new Map<string, string>()
+  // Resolve file paths only for files that survived filtering
+  const filteredFilenames: string[] = []
   for (const pkg of filteredReport.packages) {
     for (const file of pkg.files) {
-      // Use resolvedPath for reading, fall back to filename if not set
-      filePathMap.set(file.filename, file.resolvedPath ?? file.filename)
+      filteredFilenames.push(file.originalFilename ?? file.filename)
+    }
+  }
+
+  const pathContext: PathResolutionContext = {
+    sources: mergedReport.sources ?? [],
+    sourceDir: inputs.sourceDir,
+    logger,
+  }
+
+  logger.info(`Resolving file paths (sourceDir: ${inputs.sourceDir})...`)
+  const resolvedPaths = await resolveFilePaths(filteredFilenames, pathContext)
+
+  // Update file objects with resolved paths
+  for (const pkg of filteredReport.packages) {
+    for (const file of pkg.files) {
+      const lookupKey = file.originalFilename ?? file.filename
+      const resolution = resolvedPaths.get(lookupKey)
+      if (resolution) {
+        file.resolvedPath = resolution.absolutePath
+        file.filename = resolution.displayPath
+      }
+    }
+  }
+
+  // Collect all unique resolved file paths from the filtered report
+  // Map from display path (filename) to resolved path for reading
+  // Detect path collisions where multiple files resolve to the same path
+  const filePathMap = new Map<string, string>()
+  const resolvedPathToFilename = new Map<string, string>()
+  for (const pkg of filteredReport.packages) {
+    for (const file of pkg.files) {
+      const resolvedPath = file.resolvedPath ?? file.filename
+      const existingFilename = resolvedPathToFilename.get(resolvedPath)
+      if (existingFilename && existingFilename !== file.filename) {
+        logger.warning(`Path collision: ${file.filename} and ${existingFilename} both resolve to ${resolvedPath}`)
+      }
+      resolvedPathToFilename.set(resolvedPath, file.filename)
+      filePathMap.set(file.filename, resolvedPath)
     }
   }
 
   // Read file contents from disk using resolved paths
-  const fileContents = await readFileContents(filePathMap)
+  const fileContents = await readFileContents(filePathMap, logger)
 
   // Generate markdown from filtered report
   const markdown = generateMarkdown(filteredReport, fileContents)
@@ -262,19 +285,21 @@ function calculateOverallMetrics(report: CoverageReport): CoverageMetrics {
 /**
  * Read file contents from disk for a map of display paths to resolved paths.
  * Returns a map of display path -> lines array.
- * Files that don't exist return empty arrays.
+ * Files that don't exist or can't be read return empty arrays (tolerant reads).
  *
  * @param pathMap - Map of display path to resolved (absolute) path
+ * @param logger - Logger for debug/warning messages
  */
-async function readFileContents(pathMap: Map<string, string>): Promise<Map<string, string[]>> {
+async function readFileContents(pathMap: Map<string, string>, logger: Logger): Promise<Map<string, string[]>> {
   const contents = new Map<string, string[]>()
 
   for (const [displayPath, resolvedPath] of pathMap) {
     try {
       const content = await fs.readFile(resolvedPath, 'utf-8')
       contents.set(displayPath, content.split('\n'))
-    } catch {
-      // File doesn't exist or can't be read - use empty array
+    } catch (error) {
+      // File doesn't exist or can't be read - log and continue with empty array
+      logger.warning(`Could not read file ${resolvedPath}: ${error}`)
       contents.set(displayPath, [])
     }
   }

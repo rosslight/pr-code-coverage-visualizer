@@ -8,11 +8,18 @@ import { isValidGitRef } from './filter/changed-lines.js'
 const execFileAsync = promisify(execFile)
 
 /**
- * Logger implementation for CLI that uses console.
+ * Create a logger implementation for CLI that uses console.
+ * @param verbose - Whether to enable debug logging
  */
-const cliLogger: Logger = {
-  info: (message) => console.log(`[INFO] ${message}`),
-  warning: (message) => console.warn(`[WARN] ${message}`),
+function createCliLogger(verbose: boolean): Logger {
+  const logger: Logger = {
+    info: (message) => console.log(`[INFO] ${message}`),
+    warning: (message) => console.warn(`[WARN] ${message}`),
+  }
+  if (verbose) {
+    logger.debug = (message) => console.log(`[DEBUG] ${message}`)
+  }
+  return logger
 }
 
 /**
@@ -32,6 +39,7 @@ OPTIONS:
   --base-ref <ref>         Git ref to compare against (e.g., origin/main, HEAD~1)
   --show-changed-only      Filter to show only changed lines (requires --base-ref)
   --show-glob <pattern>    Glob pattern to filter which files to show (default: **)
+  --verbose, -v            Enable debug logging
   --help                   Show this help message
 
 EXAMPLES:
@@ -58,10 +66,13 @@ async function main(): Promise<void> {
       'base-ref': { type: 'string', short: 'b' },
       'show-changed-only': { type: 'boolean', default: false },
       'show-glob': { type: 'string', default: '**' },
+      verbose: { type: 'boolean', short: 'v', default: false },
       help: { type: 'boolean', short: 'h', default: false },
     },
     strict: true,
   })
+
+  const cliLogger = createCliLogger(values.verbose ?? false)
 
   // Show help
   if (values.help) {
@@ -114,9 +125,9 @@ async function main(): Promise<void> {
       files: values.files,
       sourceDir: values.source ?? process.cwd(),
       showChangedLinesOnly: values['show-changed-only'] ?? false,
-      showGlobOnly: values['show-glob'] ?? '**',
-      ...(values['base-ref'] && { baseRef: values['base-ref'] }),
-      ...(baseSha && headSha ? { baseSha, headSha } : {}),
+      globPattern: values['show-glob'] ?? '**',
+      baseSha,
+      headSha,
     },
     cliLogger,
   )

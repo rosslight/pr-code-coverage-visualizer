@@ -15,7 +15,9 @@ export type CoverageMetrics = {
 }
 
 export type FileCoverage = {
-  /** Display path (relative to source root) */
+  /** Original filename from coverage XML (immutable, used for lookups and filtering) */
+  originalFilename?: string
+  /** Display path (relative to source root, for markdown output) */
   filename: string
   /** Absolute path for reading file contents (set after path resolution) */
   resolvedPath?: string

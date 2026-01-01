@@ -1,6 +1,14 @@
-import { minimatch } from 'minimatch'
-import type { CoverageReport, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
-import type { ChangedLinesMap, FilterContext, FilterResult } from './model.js'
+import {minimatch} from 'minimatch'
+import type {CoverageReport, FileCoverage, LineCoverage, PackageCoverage} from '../coverage/model.js'
+import type {ChangedLinesMap, FilterContext, FilterResult} from './model.js'
+
+/**
+ * Normalize a path for consistent comparison.
+ * Converts backslashes to forward slashes and lowercases for case-insensitive matching.
+ */
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/').toLowerCase()
+}
 
 /**
  * Apply all configured filters to a coverage report.
@@ -32,6 +40,7 @@ export function applyFilters(report: CoverageReport, context: FilterContext): Fi
 
 /**
  * Filter coverage report to only include files matching a glob pattern.
+ * Uses originalFilename for matching to ensure stable, repo-relative path comparisons.
  *
  * @param report - The coverage report to filter
  * @param pattern - Glob pattern to match filenames against
@@ -41,7 +50,11 @@ export function filterByGlob(report: CoverageReport, pattern: string): CoverageR
   const filteredPackages: PackageCoverage[] = []
 
   for (const pkg of report.packages) {
-    const filteredFiles = pkg.files.filter((file) => minimatch(file.filename, pattern, { matchBase: true }))
+    const filteredFiles = pkg.files.filter((file) => {
+      // Use originalFilename for stable matching, fall back to filename
+      const pathToMatch = file.originalFilename ?? file.filename
+      return minimatch(pathToMatch, pattern, { matchBase: true })
+    })
 
     // Only include package if it has matching files
     if (filteredFiles.length > 0) {
@@ -57,6 +70,7 @@ export function filterByGlob(report: CoverageReport, pattern: string): CoverageR
 
 /**
  * Filter coverage report to only include lines that were changed.
+ * Uses originalFilename with normalized path comparison for reliable matching.
  * Updates line metrics to reflect the filtered lines.
  *
  * @param report - The coverage report to filter
@@ -66,11 +80,22 @@ export function filterByGlob(report: CoverageReport, pattern: string): CoverageR
 export function filterByChangedLines(report: CoverageReport, changedLines: ChangedLinesMap): CoverageReport {
   const filteredPackages: PackageCoverage[] = []
 
+  // Pre-normalize changed lines keys for efficient lookup
+  const normalizedChangedLines = new Map<string, Set<number>>()
+  for (const [path, lines] of changedLines) {
+    normalizedChangedLines.set(normalizePath(path), lines)
+  }
+
   for (const pkg of report.packages) {
     const filteredFiles: FileCoverage[] = []
 
     for (const file of pkg.files) {
-      const fileChangedLines = changedLines.get(file.filename)
+      // Use originalFilename for stable matching, fall back to filename
+      const pathToMatch = file.originalFilename ?? file.filename
+      const normalizedFilename = normalizePath(pathToMatch)
+
+      // Look up changed lines using normalized path
+      const fileChangedLines = normalizedChangedLines.get(normalizedFilename)
 
       // If no changed lines info for this file, skip it entirely
       if (!fileChangedLines || fileChangedLines.size === 0) {
@@ -100,6 +125,7 @@ export function filterByChangedLines(report: CoverageReport, changedLines: Chang
 /**
  * Filter a single file's coverage to only include changed lines.
  * Recalculates metrics based on the filtered lines.
+ * Preserves originalFilename for downstream processing.
  *
  * @param file - The file coverage to filter
  * @param changedLineNumbers - Set of line numbers that were changed
@@ -120,6 +146,11 @@ function filterFileByChangedLines(file: FileCoverage, changedLineNumbers: Set<nu
       covered: coveredCount,
       total: totalCount,
     },
+  }
+
+  // Preserve originalFilename if it exists (using conditional assignment for exactOptionalPropertyTypes)
+  if (file.originalFilename !== undefined) {
+    result.originalFilename = file.originalFilename
   }
 
   // Only include branch/method metrics if they existed on the original

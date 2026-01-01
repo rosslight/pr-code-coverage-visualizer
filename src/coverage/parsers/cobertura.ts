@@ -49,6 +49,9 @@ type CoberturaRoot = {
     '@_lines-valid': string
     '@_branches-covered': string
     '@_branches-valid': string
+    sources?: {
+      source?: string | string[]
+    }
     packages?: {
       package?: CoberturaPackage | CoberturaPackage[]
     }
@@ -79,8 +82,20 @@ export class CoberturaCoverageParser implements CoverageParser {
     const coverage = parsed.coverage
 
     const packages = this.parsePackages(coverage.packages?.package)
+    const sources = this.parseSources(coverage.sources?.source)
 
-    return { packages }
+    const report: CoverageReport = { packages }
+    if (sources.length > 0) {
+      report.sources = sources
+    }
+    return report
+  }
+
+  private parseSources(sources: string | string[] | undefined): string[] {
+    if (!sources) return []
+    const sourceList = Array.isArray(sources) ? sources : [sources]
+    // Normalize path separators (Windows backslashes to forward slashes)
+    return sourceList.map((s) => s.replace(/\\/g, '/'))
   }
 
   private parsePackages(packages: CoberturaPackage | CoberturaPackage[] | undefined): PackageCoverage[] {

@@ -9,6 +9,7 @@ try {
       updateComment: core.getBooleanInput('update-comment'),
       showChangedLinesOnly: core.getBooleanInput('show-changed-lines-only'),
       showGlobOnly: core.getInput('show-glob-only') || '**',
+      sourceDir: core.getInput('source') || process.env['GITHUB_WORKSPACE'] || process.cwd(),
     },
     getOctokit(),
     await getContext(),

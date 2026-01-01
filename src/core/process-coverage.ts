@@ -3,6 +3,7 @@ import { glob } from 'glob'
 import { CoberturaCoverageParser, type CoverageReport } from '../coverage/index.js'
 import { applyFilters, getChangedLinesFromGit, type ChangedLinesMap, type FilterContext } from '../filter/index.js'
 import { generateMarkdown } from '../markdown/index.js'
+import { resolveFilePaths, type PathResolutionContext } from '../path/index.js'
 
 /**
  * Logger interface for dependency injection.
@@ -19,6 +20,8 @@ export type Logger = {
 export type ProcessCoverageInputs = {
   /** Coverage file patterns (newline or comma separated) */
   files: string
+  /** Source directory for resolving file paths from coverage files */
+  sourceDir: string
   /** Whether to filter to show only changed lines */
   showChangedLinesOnly: boolean
   /** Glob pattern to filter which files to show */
@@ -86,8 +89,36 @@ export async function processCoverage(
     reports.push(report)
   }
 
-  // Merge all reports into one
+  // Merge all reports into one (including sources)
   const mergedReport = mergeReports(reports)
+
+  // Resolve file paths to get display paths and absolute paths
+  const allFilenames: string[] = []
+  for (const pkg of mergedReport.packages) {
+    for (const file of pkg.files) {
+      allFilenames.push(file.filename)
+    }
+  }
+
+  const pathContext: PathResolutionContext = {
+    sources: mergedReport.sources ?? [],
+    sourceDir: inputs.sourceDir,
+    logger,
+  }
+
+  logger.info(`Resolving file paths (sourceDir: ${inputs.sourceDir})...`)
+  const resolvedPaths = await resolveFilePaths(allFilenames, pathContext)
+
+  // Update file objects with resolved paths
+  for (const pkg of mergedReport.packages) {
+    for (const file of pkg.files) {
+      const resolution = resolvedPaths.get(file.filename)
+      if (resolution) {
+        file.resolvedPath = resolution.absolutePath
+        file.filename = resolution.displayPath
+      }
+    }
+  }
 
   // Get changed lines using git if filtering is enabled and we have a base ref
   let changedLines: ChangedLinesMap | undefined
@@ -118,16 +149,18 @@ export async function processCoverage(
     logger.info('Coverage report filtered based on configuration')
   }
 
-  // Collect all unique file paths from the filtered report
-  const filePaths = new Set<string>()
+  // Collect all unique resolved file paths from the filtered report
+  // Map from display path (filename) to resolved path for reading
+  const filePathMap = new Map<string, string>()
   for (const pkg of filteredReport.packages) {
     for (const file of pkg.files) {
-      filePaths.add(file.filename)
+      // Use resolvedPath for reading, fall back to filename if not set
+      filePathMap.set(file.filename, file.resolvedPath ?? file.filename)
     }
   }
 
-  // Read file contents from disk
-  const fileContents = await readFileContents([...filePaths])
+  // Read file contents from disk using resolved paths
+  const fileContents = await readFileContents(filePathMap)
 
   // Generate markdown from filtered report
   const markdown = generateMarkdown(filteredReport, fileContents)
@@ -140,11 +173,20 @@ export async function processCoverage(
 
 /**
  * Merge multiple coverage reports into one.
+ * Also merges sources from all reports.
  */
 function mergeReports(reports: CoverageReport[]): CoverageReport {
   const packageMap = new Map<string, CoverageReport['packages'][0]>()
+  const allSources = new Set<string>()
 
   for (const report of reports) {
+    // Collect sources from all reports
+    if (report.sources) {
+      for (const source of report.sources) {
+        allSources.add(source)
+      }
+    }
+
     for (const pkg of report.packages) {
       if (packageMap.has(pkg.name)) {
         // Merge files into existing package
@@ -156,7 +198,11 @@ function mergeReports(reports: CoverageReport[]): CoverageReport {
     }
   }
 
-  return { packages: Array.from(packageMap.values()) }
+  const result: CoverageReport = { packages: Array.from(packageMap.values()) }
+  if (allSources.size > 0) {
+    result.sources = Array.from(allSources)
+  }
+  return result
 }
 
 /**
@@ -195,20 +241,22 @@ function calculateOverallMetrics(report: CoverageReport): CoverageMetrics {
 }
 
 /**
- * Read file contents from disk for a list of file paths.
- * Returns a map of filepath -> lines array.
+ * Read file contents from disk for a map of display paths to resolved paths.
+ * Returns a map of display path -> lines array.
  * Files that don't exist return empty arrays.
+ *
+ * @param pathMap - Map of display path to resolved (absolute) path
  */
-async function readFileContents(filepaths: string[]): Promise<Map<string, string[]>> {
+async function readFileContents(pathMap: Map<string, string>): Promise<Map<string, string[]>> {
   const contents = new Map<string, string[]>()
 
-  for (const filepath of filepaths) {
+  for (const [displayPath, resolvedPath] of pathMap) {
     try {
-      const content = await fs.readFile(filepath, 'utf-8')
-      contents.set(filepath, content.split('\n'))
+      const content = await fs.readFile(resolvedPath, 'utf-8')
+      contents.set(displayPath, content.split('\n'))
     } catch {
       // File doesn't exist or can't be read - use empty array
-      contents.set(filepath, [])
+      contents.set(displayPath, [])
     }
   }
 

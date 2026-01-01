@@ -17,6 +17,10 @@ inputs:
     description: Select subdirectories to show coverage data for
     required: false
     default: '**'
+  source:
+    description: Source directory for resolving file paths from coverage files
+    required: false
+    default: ${{ github.workspace }}
   token:
     description: GitHub token for API access
     required: true

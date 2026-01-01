@@ -8,6 +8,7 @@ export type Inputs = {
   updateComment: boolean
   showChangedLinesOnly: boolean
   showGlobOnly: string
+  sourceDir: string
 }
 
 /**
@@ -26,6 +27,7 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   const result = await processCoverage(
     {
       files: inputs.files,
+      sourceDir: inputs.sourceDir,
       showChangedLinesOnly: inputs.showChangedLinesOnly,
       showGlobOnly: inputs.showGlobOnly,
       baseRef,

@@ -2,6 +2,7 @@
 ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-0.00%25-red.svg?style=flat)
 
 **MultiFilePackage** (LineCoverage: 60%, BranchCoverage: 0%)
+
 <details open><summary>src/file2.py</summary>
 
 ```python

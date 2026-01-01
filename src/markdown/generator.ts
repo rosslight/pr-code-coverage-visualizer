@@ -8,10 +8,21 @@ const COVERAGE_ICONS = {
   'no-info': '⬜',
 } as const
 
+/** Default maximum number of surrounding lines around an uncovered line */
+export const DEFAULT_MAX_NUMBER_OF_SURROUNDING_LINES = 1
+
+/** Default maximum characters for markdown output */
+export const DEFAULT_MAX_CHARACTERS = 65536
+
+/** Minimum characters required for meaningful markdown output (badges + legend + notice) */
+export const MINIMUM_CHARACTERS = 500
+
 /** Options for markdown generation */
 export type MarkdownOptions = {
   /** Number of lines to show before and after uncovered lines (default: 1) */
   numberOfSurroundingLines?: number
+  /** Maximum number of characters in the output (default: 65536, minimum: 500) */
+  maxCharacters?: number
 }
 
 /**
@@ -22,55 +33,182 @@ export type MarkdownOptions = {
  * @param fileContents - Map of filepath to array of line contents
  * @param options - Optional configuration for markdown generation
  * @returns Markdown string representation
+ * @throws Error if maxCharacters is below MINIMUM_CHARACTERS
  */
 export function generateMarkdown(
   report: CoverageReport,
   fileContents: Map<string, string[]>,
   options: MarkdownOptions = {},
 ): string {
-  const sections: string[] = []
+  const numberOfSurroundingLines = options.numberOfSurroundingLines ?? DEFAULT_MAX_NUMBER_OF_SURROUNDING_LINES
+  const maxCharacters = options.maxCharacters ?? DEFAULT_MAX_CHARACTERS
 
-  // Add coverage badges at the top
-  const badges = generateCoverageBadges(report)
-  if (badges) {
-    sections.push(badges)
+  // Validate minimum character limit
+  if (maxCharacters < MINIMUM_CHARACTERS) {
+    throw new Error(`maxCharacters must be at least ${MINIMUM_CHARACTERS}, got ${maxCharacters}`)
   }
 
-  // Generate per-package sections (skip packages with no uncovered lines)
+  // Generate fixed content (badges and legend)
+  const badges = generateCoverageBadges(report)
+  const legend = generateLegend()
+
+  // Generate all package sections with their file contents
+  const packageSections: PackageSectionData[] = []
   for (const pkg of report.packages) {
-    const section = generatePackageSection(pkg, fileContents, options)
-    if (section !== null) {
-      sections.push(section)
+    const sectionData = generatePackageSectionData(pkg, fileContents, numberOfSurroundingLines)
+    if (sectionData !== null) {
+      packageSections.push(sectionData)
     }
   }
 
-  // If only badges exist (no uncovered lines), add success message
-  if (sections.length <= 1) {
-    sections.push('✅ All lines are covered!')
-  } else {
-    // Add legend at the end
-    sections.push(generateLegend())
+  // Check if all lines are covered (no package sections with uncovered lines)
+  const hasUncoveredContent = packageSections.length > 0
+
+  if (!hasUncoveredContent) {
+    // No uncovered lines - return badges + success message
+    // We assume that this always fits the minimum size
+    const successMessage = '✅ All lines are covered!'
+    return badges ? `${badges}\n\n${successMessage}` : successMessage
   }
 
-  return sections.join('\n\n')
+  const separator = '\n\n'
+  return buildMarkdownWithinLimitFileLevel({
+    badges,
+    legend,
+    packageSections,
+    separator,
+    maxCharacters,
+  })
+}
+
+function buildMarkdownWithinLimitFileLevel(params: {
+  badges: string | null
+  legend: string
+  packageSections: PackageSectionData[]
+  separator: string
+  maxCharacters: number
+}): string {
+  const { badges, legend, packageSections, separator, maxCharacters } = params
+
+  // Parts we will join with `separator`
+  const parts: string[] = []
+  if (badges) parts.push(badges)
+
+  // We will always include legend at the end, so every "fit" check reserves room for it.
+  const legendOnlyLength = joinedLength([...parts, legend], separator)
+  if (legendOnlyLength > maxCharacters) {
+    // Should not happen with MINIMUM_CHARACTERS, but be safe.
+    const out = [...parts, legend].join(separator)
+    return out.slice(0, maxCharacters)
+  }
+
+  let omittedFiles = 0
+  let omittedPackages = 0
+
+  // Build incrementally: header, then each file
+  for (let p = 0; p < packageSections.length; p++) {
+    const pkg = packageSections[p]!
+
+    // Decide whether we can include this package header at all
+    if (!canFitWithLegend(parts, pkg.header, legend, separator, maxCharacters)) {
+      // Omit this package and all remaining
+      omittedPackages += packageSections.length - p
+      for (let i = p; i < packageSections.length; i++) omittedFiles += packageSections[i]!.files.length
+      break
+    }
+
+    // Include header
+    parts.push(pkg.header)
+
+    for (let f = 0; f < pkg.files.length; f++) {
+      const file = pkg.files[f]!.content
+
+      if (!canFitWithLegend(parts, file, legend, separator, maxCharacters)) {
+        // Can't fit this file or remaining files in this package
+        omittedFiles += pkg.files.length - f
+
+        // Also omit all remaining packages completely
+        omittedPackages += packageSections.length - (p + 1)
+        for (let i = p + 1; i < packageSections.length; i++) omittedFiles += packageSections[i]!.files.length
+
+        // Optionally: if we added a package header but no files fit, you may want to keep it for context.
+        // Current behavior: we keep the header.
+        // If you *don't* want empty headers, you could remove it here when !includedAnyFileInThisPkg.
+
+        p = packageSections.length // break outer
+        break
+      }
+
+      parts.push(file)
+    }
+  }
+
+  // Add truncation notice if anything omitted AND it fits
+  if (omittedFiles > 0 || omittedPackages > 0) {
+    const notice = generateTruncationNotice(omittedFiles, omittedPackages)
+    if (canFitWithLegend(parts, notice, legend, separator, maxCharacters)) {
+      parts.push(notice)
+    }
+  }
+
+  // Finish with legend
+  parts.push(legend)
+
+  // Hard guarantee (should already be true)
+  let out = parts.join(separator)
+  if (out.length > maxCharacters) out = out.slice(0, maxCharacters)
+  return out
+}
+
+function joinedLength(parts: string[], separator: string): number {
+  if (parts.length === 0) return 0
+  let len = 0
+  for (const p of parts) len += p.length
+  len += separator.length * (parts.length - 1)
+  return len
+}
+
+function canFitWithLegend(parts: string[], candidate: string, legend: string, separator: string, max: number): boolean {
+  const test = [...parts, candidate, legend]
+  return joinedLength(test, separator) <= max
+}
+
+/** Data structure for a package section with its files */
+type PackageSectionData = {
+  packageName: string
+  header: string
+  files: FileSectionData[]
+}
+
+/** Data structure for a file section */
+type FileSectionData = {
+  filename: string
+  content: string
 }
 
 /**
- * Check if a file has any uncovered or partial lines.
+ * Generate truncation notice with counts of omitted items.
  */
-function hasUncoveredLines(file: FileCoverage): boolean {
-  return file.lines.some((line) => line.state === 'not-covered' || line.state === 'partial')
+function generateTruncationNotice(omittedFiles: number, omittedPackages: number): string {
+  const parts: string[] = []
+  if (omittedFiles > 0) {
+    parts.push(`${omittedFiles} file(s)`)
+  }
+  if (omittedPackages > 0) {
+    parts.push(`${omittedPackages} package(s)`)
+  }
+  return `... (${parts.join(' and ')} not shown due to size limit)`
 }
 
 /**
- * Generate a markdown section for a single package.
+ * Generate package section data without joining into final string.
  * Returns null if the package has no files with uncovered lines.
  */
-function generatePackageSection(
+function generatePackageSectionData(
   pkg: PackageCoverage,
   fileContents: Map<string, string[]>,
-  options: MarkdownOptions,
-): string | null {
+  numberOfSurroundingLines: number,
+): PackageSectionData | null {
   // Filter to only files with uncovered lines
   const filesWithUncovered = pkg.files.filter(hasUncoveredLines)
 
@@ -78,8 +216,6 @@ function generatePackageSection(
   if (filesWithUncovered.length === 0) {
     return null
   }
-
-  const lines: string[] = []
 
   // Calculate aggregate metrics for the package
   const packageMetrics = calculatePackageMetrics(pkg.files)
@@ -94,21 +230,34 @@ function generatePackageSection(
   }
   header += ')'
 
-  lines.push(header)
-
-  // Generate file sections only for files with uncovered lines
+  // Generate file sections
+  const files: FileSectionData[] = []
   for (const file of filesWithUncovered) {
     const content = fileContents.get(file.filename) ?? []
-    lines.push(generateFileSection(file, content, options))
+    files.push({
+      filename: file.filename,
+      content: generateFileSection(file, content, numberOfSurroundingLines),
+    })
   }
 
-  return lines.join('\n')
+  return {
+    packageName: pkg.name,
+    header,
+    files,
+  }
+}
+
+/**
+ * Check if a file has any uncovered or partial lines.
+ */
+function hasUncoveredLines(file: FileCoverage): boolean {
+  return file.lines.some((line) => line.state === 'not-covered' || line.state === 'partial')
 }
 
 /**
  * Generate a collapsible markdown section for a single file.
  */
-function generateFileSection(file: FileCoverage, fileLines: string[], options: MarkdownOptions): string {
+function generateFileSection(file: FileCoverage, fileLines: string[], numberOfSurroundingLines: number): string {
   const lines: string[] = []
 
   // Start collapsible details section
@@ -118,7 +267,7 @@ function generateFileSection(file: FileCoverage, fileLines: string[], options: M
   // Generate code block with coverage annotations
   const extension = getFileExtension(file.filename)
   lines.push('```' + extension)
-  lines.push(generateAnnotatedLines(file.lines, fileLines, options))
+  lines.push(generateAnnotatedLines(file.lines, fileLines, numberOfSurroundingLines))
   lines.push('```')
 
   lines.push('</details>')
@@ -131,12 +280,15 @@ function generateFileSection(file: FileCoverage, fileLines: string[], options: M
  * Only shows uncovered/partial lines with configurable context lines around them.
  * Uses smart ellipsis handling: shows single lines instead of "..." when gap is small.
  */
-function generateAnnotatedLines(coverageLines: LineCoverage[], fileLines: string[], options: MarkdownOptions): string {
+function generateAnnotatedLines(
+  coverageLines: LineCoverage[],
+  fileLines: string[],
+  numberOfSurroundingLines: number,
+): string {
   if (coverageLines.length === 0) {
     return '(no coverage data)'
   }
 
-  const numberOfSurroundingLines = options.numberOfSurroundingLines ?? 1
   const sortedLines = [...coverageLines].sort((a, b) => a.lineNumber - b.lineNumber)
 
   // Create a map for quick line lookup

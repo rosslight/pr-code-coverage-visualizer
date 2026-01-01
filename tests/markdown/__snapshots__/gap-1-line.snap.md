@@ -1,6 +1,7 @@
 ![Line Coverage](https://img.shields.io/badge/Line%20Coverage-60.00%25-green.svg?style=flat)
 
 **TestPackage** (LineCoverage: 60%)
+
 <details open><summary>src/test.ts</summary>
 
 ```typescript

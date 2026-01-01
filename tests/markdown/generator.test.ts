@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CoverageReport } from '../../src/coverage/model.js'
-import { generateMarkdown } from '../../src/markdown/index.js'
+import { generateMarkdown, MINIMUM_CHARACTERS } from '../../src/markdown/index.js'
 
 type FakeFileInfo = {
   filename: string
@@ -454,6 +454,217 @@ describe('generateMarkdown', () => {
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/line-exceeds-file-length.snap.md')
+    })
+  })
+
+  describe('character limit and truncation', () => {
+    it('throws error when maxCharacters is below minimum', () => {
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'Pkg',
+            files: [
+              {
+                filename: 'a.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ],
+      }
+
+      expect(() =>
+        generateMarkdown(report, createFakeFileContents([{ filename: 'a.ts', numberOfLines: 1 }]), {
+          maxCharacters: 100,
+        }),
+      ).toThrow(`maxCharacters must be at least ${MINIMUM_CHARACTERS}`)
+    })
+
+    it('does not truncate when content fits within limit', async () => {
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'SmallPkg',
+            files: [
+              {
+                filename: 'small.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ],
+      }
+
+      const markdown = generateMarkdown(report, createFakeFileContents([{ filename: 'small.ts', numberOfLines: 2 }]), {
+        maxCharacters: 2000,
+      })
+
+      await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-none.snap.md')
+      expect(markdown).not.toContain('not shown due to size limit')
+    })
+
+    it('truncates files from end when limit exceeded', async () => {
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'MultiFilePkg',
+            files: [
+              {
+                filename: 'file1.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'file2.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'file3.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ],
+      }
+
+      const markdown = generateMarkdown(
+        report,
+        createFakeFileContents([
+          { filename: 'file1.ts', numberOfLines: 2 },
+          { filename: 'file2.ts', numberOfLines: 2 },
+          { filename: 'file3.ts', numberOfLines: 2 },
+        ]),
+        { maxCharacters: 550 },
+      )
+
+      await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-files.snap.md')
+      expect(markdown).toContain('file(s)')
+      expect(markdown).toContain('not shown due to size limit')
+    })
+
+    it('truncates entire packages from end when limit exceeded', async () => {
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'Pkg1',
+            files: [
+              {
+                filename: 'pkg1/a.ts',
+                lines: [
+                  { lineNumber: 1, state: 'not-covered' },
+                  { lineNumber: 4, state: 'not-covered' },
+                ],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+          {
+            name: 'Pkg2',
+            files: [
+              {
+                filename: 'pkg2/b.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+          {
+            name: 'Pkg3',
+            files: [
+              {
+                filename: 'pkg3/c.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ],
+      }
+
+      const markdown = generateMarkdown(
+        report,
+        createFakeFileContents([
+          { filename: 'pkg1/a.ts', numberOfLines: 5 },
+          { filename: 'pkg2/b.ts', numberOfLines: 2 },
+          { filename: 'pkg3/c.ts', numberOfLines: 2 },
+        ]),
+        { maxCharacters: 500 },
+      )
+
+      await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-packages.snap.md')
+    })
+
+    it('shows minimal output with badges and legend when severely limited', async () => {
+      // Create multiple files to force truncation at minimum limit
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'LargePkg',
+            files: [
+              {
+                filename: 'file1.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'file2.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'file3.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'file4.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ],
+      }
+
+      const markdown = generateMarkdown(
+        report,
+        createFakeFileContents([
+          { filename: 'file1.ts', numberOfLines: 2 },
+          { filename: 'file2.ts', numberOfLines: 2 },
+          { filename: 'file3.ts', numberOfLines: 2 },
+          { filename: 'file4.ts', numberOfLines: 2 },
+        ]),
+        { maxCharacters: 500 },
+      )
+
+      await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-minimal.snap.md')
+    })
+
+    it('uses default maxCharacters of 65536 when not specified', () => {
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'Pkg',
+            files: [
+              {
+                filename: 'test.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ],
+      }
+
+      // Should not throw and should not truncate small content
+      const markdown = generateMarkdown(report, createFakeFileContents([{ filename: 'test.ts', numberOfLines: 2 }]))
+
+      expect(markdown).not.toContain('not shown due to size limit')
+      expect(markdown.length).toBeLessThan(65536)
     })
   })
 })

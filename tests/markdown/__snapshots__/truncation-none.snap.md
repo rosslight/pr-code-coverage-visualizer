@@ -1,12 +1,12 @@
 ![Line Coverage](https://img.shields.io/badge/Line%20Coverage-0.00%25-red.svg?style=flat)
 
-**TestPackage** (LineCoverage: 0%)
+**SmallPkg** (LineCoverage: 0%)
 
-<details open><summary>src/missing.ts</summary>
+<details open><summary>small.ts</summary>
 
 ```typescript
-  1 🟥 
-  2 🟥 
+  1 🟥 some content in line 1
+  2 ⬜ some content in line 2
 ```
 </details>
 

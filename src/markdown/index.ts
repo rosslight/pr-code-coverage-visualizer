@@ -1,1 +1,6 @@
-export { generateMarkdown, type MarkdownOptions } from './generator.js'
+export {
+  generateMarkdown,
+  type MarkdownOptions,
+  DEFAULT_MAX_CHARACTERS,
+  MINIMUM_CHARACTERS,
+} from './generator.js'

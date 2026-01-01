@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.75">
+  <sources><source>.</source></sources>
+  <packages>
+    <package name="app" line-rate="0.75">
+      <classes>
+        <class filename="src/calculator.ts" line-rate="0.75">
+          <lines>
+            <line number="1" hits="1" branch="false"/>
+            <line number="2" hits="1" branch="false"/>
+            <line number="3" hits="0" branch="false"/>
+            <line number="4" hits="1" branch="false"/>
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

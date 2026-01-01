@@ -1,6 +1,6 @@
-import {minimatch} from 'minimatch'
-import type {CoverageReport, FileCoverage, LineCoverage, PackageCoverage} from '../coverage/model.js'
-import type {ChangedLinesMap, FilterContext, FilterResult} from './model.js'
+import { minimatch } from 'minimatch'
+import type { CoverageReport, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
+import type { ChangedLinesMap, FilterContext, FilterResult } from './model.js'
 
 /**
  * Normalize a path for consistent comparison.

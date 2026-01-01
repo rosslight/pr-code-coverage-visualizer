@@ -1,22 +1,36 @@
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { ChangedLinesMap } from './model.js'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
+
+export function isValidSha(sha: string): boolean {
+  return /^[0-9a-f]{40}$/i.test(sha)
+}
+
+export function isValidGitRef(ref: string): boolean {
+  // Must start with alphanumeric, allow common ref chars, reject '..' for security
+  return /^[a-zA-Z0-9][a-zA-Z0-9_.~^/@-]*$/.test(ref) && !ref.includes('..')
+}
 
 /**
  * Ensure a commit SHA is available locally by fetching it if needed.
  * This handles the common case where actions/checkout does a shallow clone.
  *
  * @param sha - The commit SHA to ensure is available
+ * @throws Error if SHA format is invalid
  */
 async function ensureShaAvailable(sha: string): Promise<void> {
+  if (!isValidSha(sha)) {
+    throw new Error(`Invalid SHA format: ${sha}`)
+  }
+
   try {
     // Check if the commit exists locally
-    await execAsync(`git cat-file -e ${sha}^{commit}`)
+    await execFileAsync('git', ['cat-file', '-e', `${sha}^{commit}`])
   } catch {
     // Commit not available locally - fetch it
-    await execAsync(`git fetch origin ${sha} --depth=1`)
+    await execFileAsync('git', ['fetch', 'origin', sha, '--depth=1'])
   }
 }
 
@@ -29,11 +43,11 @@ async function ensureShaAvailable(sha: string): Promise<void> {
  * @returns Map of filename to set of changed line numbers
  */
 export async function getChangedLinesFromGit(baseSha: string, headSha: string): Promise<ChangedLinesMap> {
-  // Ensure both commits are available locally
+  // Ensure both commits are available locally (also validates SHA format)
   await ensureShaAvailable(baseSha)
   await ensureShaAvailable(headSha)
 
-  const { stdout: diffOutput } = await execAsync(`git diff ${baseSha} ${headSha}`, {
+  const { stdout: diffOutput } = await execFileAsync('git', ['diff', baseSha, headSha], {
     maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large diffs
   })
 

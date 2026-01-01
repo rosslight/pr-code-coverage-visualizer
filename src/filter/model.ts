@@ -52,4 +52,3 @@ export type FilterResult = {
   /** Whether any filtering was actually applied */
   wasFiltered: boolean
 }
-

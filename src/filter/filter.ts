@@ -1,6 +1,6 @@
-import {minimatch} from 'minimatch'
-import type {CoverageReport, FileCoverage, LineCoverage, PackageCoverage} from '../coverage/model.js'
-import type {ChangedLinesMap, FilterContext, FilterResult} from './model.js'
+import { minimatch } from 'minimatch'
+import type { CoverageReport, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
+import type { ChangedLinesMap, FilterContext, FilterResult } from './model.js'
 
 /**
  * Apply all configured filters to a coverage report.
@@ -136,4 +136,3 @@ function filterFileByChangedLines(file: FileCoverage, changedLineNumbers: Set<nu
 
   return result
 }
-

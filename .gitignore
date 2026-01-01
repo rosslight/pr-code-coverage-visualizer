@@ -17,7 +17,8 @@ Thumbs.db
 lib/
 
 # Only release tag contains dist directory
-/dist
+dist/
+dist-cli/
 
 # Ignore coverage files
 coverage/

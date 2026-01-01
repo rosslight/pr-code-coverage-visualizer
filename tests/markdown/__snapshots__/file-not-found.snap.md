@@ -2,7 +2,7 @@
 
 **TestPackage** (LineCoverage: 0%)
 
-<details open><summary>src/missing.ts</summary>
+<details><summary>src/missing.ts</summary>
 
 ```typescript
   1 🟥 

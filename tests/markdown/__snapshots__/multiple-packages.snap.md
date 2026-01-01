@@ -2,7 +2,7 @@
 
 **Package.Tests** (LineCoverage: 0%)
 
-<details open><summary>tests/test_utils.cs</summary>
+<details><summary>tests/test_utils.cs</summary>
 
 ```csharp
 ...

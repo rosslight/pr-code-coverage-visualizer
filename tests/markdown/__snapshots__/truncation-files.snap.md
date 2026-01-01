@@ -2,7 +2,7 @@
 
 **MultiFilePkg** (LineCoverage: 0%)
 
-<details open><summary>file1.ts</summary>
+<details><summary>file1.ts</summary>
 
 ```typescript
   1 🟥 some content in line 1
@@ -10,7 +10,7 @@
 ```
 </details>
 
-<details open><summary>file2.ts</summary>
+<details><summary>file2.ts</summary>
 
 ```typescript
   1 🟥 some content in line 1

@@ -3,7 +3,7 @@
 
 **GapsPackage** (LineCoverage: 40%, BranchCoverage: 0%)
 
-<details open><summary>src/gaps.rs</summary>
+<details><summary>src/gaps.rs</summary>
 
 ```rust
 ...

@@ -2,7 +2,7 @@
 
 **TestPackage** (LineCoverage: 50%)
 
-<details open><summary>src/test.ts</summary>
+<details><summary>src/test.ts</summary>
 
 ```typescript
 ...

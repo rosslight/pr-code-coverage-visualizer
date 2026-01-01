@@ -3,7 +3,7 @@
 
 **TestPackage** (LineCoverage: 75%, BranchCoverage: 0%)
 
-<details open><summary>src/example.ts</summary>
+<details><summary>src/example.ts</summary>
 
 ```typescript
   1 🟩 some content in line 1

@@ -61,7 +61,7 @@ jobs:
 **Uncovered files:**
 
 `My rust project` (LineCoverage: 100%, BranchCoverage: 70%)
-<details open><summary>path/to/rust/file1.rs</summary>
+<details><summary>path/to/rust/file1.rs</summary>
 
 ```rs
 ...
@@ -77,7 +77,7 @@ jobs:
 </details>
 
 `My .NET project` (LineCoverage: 70%, BranchCoverage: 10%)
-<details open><summary>path/to/dotnet/file1.cs</summary>
+<details><summary>path/to/dotnet/file1.cs</summary>
 
 ```cs
 ...

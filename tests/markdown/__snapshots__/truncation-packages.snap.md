@@ -2,7 +2,7 @@
 
 **Pkg1** (LineCoverage: 0%)
 
-<details open><summary>pkg1/a.ts</summary>
+<details><summary>pkg1/a.ts</summary>
 
 ```typescript
   1 🟥 some content in line 1

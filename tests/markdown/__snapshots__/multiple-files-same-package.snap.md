@@ -3,7 +3,7 @@
 
 **MultiFilePackage** (LineCoverage: 60%, BranchCoverage: 0%)
 
-<details open><summary>src/file2.py</summary>
+<details><summary>src/file2.py</summary>
 
 ```python
   1 🟥 some content in line 1

@@ -261,7 +261,7 @@ function generateFileSection(file: FileCoverage, fileLines: string[], numberOfSu
   const lines: string[] = []
 
   // Start collapsible details section
-  lines.push(`<details open><summary>${file.filename}</summary>`)
+  lines.push(`<details><summary>${file.filename}</summary>`)
   lines.push('')
 
   // Generate code block with coverage annotations

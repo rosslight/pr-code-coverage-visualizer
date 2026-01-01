@@ -2,7 +2,7 @@
 
 **SmallPkg** (LineCoverage: 0%)
 
-<details open><summary>small.ts</summary>
+<details><summary>small.ts</summary>
 
 ```typescript
   1 🟥 some content in line 1

@@ -3,7 +3,8 @@
   "scripts": {
     "check": "biome migrate --write && biome check --fix",
     "build": "ncc build --source-map --license licenses.txt src/index.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "type": "module",
   "dependencies": {

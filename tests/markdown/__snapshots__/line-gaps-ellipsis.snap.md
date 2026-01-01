@@ -6,12 +6,14 @@
 
 ```rust
 ...
- 10 🔳 let value10 = 10;
- 11 🔳 let value11 = 11;
+  9 ⬜ some content in line 9
+ 10 🟥 some content in line 10
+ 11 🟥 some content in line 11
+ 12 ⬜ some content in line 12
 ...
- 50 🟨 let value50 = 50;
-...
+ 49 ⬜ some content in line 49
+ 50 🟨 some content in line 50
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

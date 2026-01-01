@@ -2,48 +2,26 @@ import { describe, expect, it } from 'vitest'
 import type { CoverageReport } from '../../src/coverage/model.js'
 import { generateMarkdown } from '../../src/markdown/index.js'
 
+type FakeFileInfo = {
+  filename: string
+  numberOfLines: number
+}
+
 /**
  * Generate fake file contents for a coverage report.
  * Creates mock lines based on the maximum line number in each file.
  */
-function createFakeFileContents(report: CoverageReport): Map<string, string[]> {
+function createFakeFileContents(fileInfos: FakeFileInfo[]): Map<string, string[]> {
   const contents = new Map<string, string[]>()
 
-  for (const pkg of report.packages) {
-    for (const file of pkg.files) {
-      // Find the max line number to know how many lines to generate
-      const maxLine = Math.max(...file.lines.map((l) => l.lineNumber), 0)
-      // Generate fake lines with realistic-looking content
-      const ext = file.filename.split('.').pop() ?? ''
-      const lines = Array.from({ length: maxLine + 10 }, (_, i) => generateFakeLine(ext, i + 1))
-      contents.set(file.filename, lines)
-    }
+  for (const fileInfo of fileInfos) {
+    const lines = Array.from({ length: fileInfo.numberOfLines }, (_, i) => {
+      return `some content in line ${i + 1}`
+    })
+    contents.set(fileInfo.filename, lines)
   }
 
   return contents
-}
-
-/**
- * Generate a fake line of code based on file extension.
- */
-function generateFakeLine(ext: string, lineNum: number): string {
-  switch (ext) {
-    case 'ts':
-    case 'tsx':
-    case 'js':
-    case 'jsx':
-      return `const value${lineNum} = ${lineNum};`
-    case 'cs':
-      return `var value${lineNum} = ${lineNum};`
-    case 'rs':
-      return `let value${lineNum} = ${lineNum};`
-    case 'py':
-      return `value${lineNum} = ${lineNum}`
-    case 'go':
-      return `value${lineNum} := ${lineNum}`
-    default:
-      return `line ${lineNum}`
-  }
 }
 
 describe('generateMarkdown', () => {
@@ -69,7 +47,10 @@ describe('generateMarkdown', () => {
       ],
     }
 
-    const markdown = generateMarkdown(report, createFakeFileContents(report))
+    const markdown = generateMarkdown(
+      report,
+      createFakeFileContents([{ filename: 'src/example.ts', numberOfLines: 10 }]),
+    )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/simple-report.snap.md')
   })
@@ -107,7 +88,13 @@ describe('generateMarkdown', () => {
       ],
     }
 
-    const markdown = generateMarkdown(report, createFakeFileContents(report))
+    const markdown = generateMarkdown(
+      report,
+      createFakeFileContents([
+        { filename: 'src/core/utils.cs', numberOfLines: 15 },
+        { filename: 'tests/test_utils.cs', numberOfLines: 10 },
+      ]),
+    )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/multiple-packages.snap.md')
   })
@@ -137,7 +124,10 @@ describe('generateMarkdown', () => {
       ],
     }
 
-    const markdown = generateMarkdown(report, createFakeFileContents(report))
+    const markdown = generateMarkdown(
+      report,
+      createFakeFileContents([{ filename: 'src/gaps.rs', numberOfLines: 50 }]),
+    )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/line-gaps-ellipsis.snap.md')
     expect(markdown).toContain('...')
@@ -153,7 +143,7 @@ describe('generateMarkdown', () => {
       ],
     }
 
-    const markdown = generateMarkdown(report, createFakeFileContents(report))
+    const markdown = generateMarkdown(report, createFakeFileContents([]))
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/empty-package.snap.md')
   })
@@ -187,7 +177,13 @@ describe('generateMarkdown', () => {
       ],
     }
 
-    const markdown = generateMarkdown(report, createFakeFileContents(report))
+    const markdown = generateMarkdown(
+      report,
+      createFakeFileContents([
+        { filename: 'src/file1.py', numberOfLines: 3 },
+        { filename: 'src/file2.py', numberOfLines: 3 },
+      ]),
+    )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/multiple-files-same-package.snap.md')
   })
@@ -218,7 +214,14 @@ describe('generateMarkdown', () => {
       ],
     }
 
-    const markdown = generateMarkdown(report, createFakeFileContents(report))
+    const markdown = generateMarkdown(
+      report,
+      createFakeFileContents([
+        { filename: 'test.cs', numberOfLines: 1 },
+        { filename: 'test.rs', numberOfLines: 2 },
+        { filename: 'test.tsx', numberOfLines: 3 },
+      ]),
+    )
 
     expect(markdown).toContain('```csharp')
     expect(markdown).toContain('```rust')
@@ -246,9 +249,10 @@ describe('generateMarkdown', () => {
         ],
       }
 
-      const fileContents = new Map([['src/test.ts', Array.from({ length: 10 }, (_, i) => `line ${i + 1}`)]])
-
-      const markdown = generateMarkdown(report, fileContents)
+      const markdown = generateMarkdown(
+        report,
+        createFakeFileContents([{ filename: 'src/test.ts', numberOfLines: 10 }]),
+      )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-leading.snap.md')
     })
@@ -274,9 +278,10 @@ describe('generateMarkdown', () => {
         ],
       }
 
-      const fileContents = new Map([['src/test.ts', Array.from({ length: 10 }, (_, i) => `line ${i + 1}`)]])
-
-      const markdown = generateMarkdown(report, fileContents)
+      const markdown = generateMarkdown(
+        report,
+        createFakeFileContents([{ filename: 'src/test.ts', numberOfLines: 10 }]),
+      )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-trailing.snap.md')
     })
@@ -336,9 +341,10 @@ describe('generateMarkdown', () => {
         ],
       }
 
-      const fileContents = new Map([['src/test.ts', Array.from({ length: 15 }, (_, i) => `line ${i + 1}`)]])
-
-      const markdown = generateMarkdown(report, fileContents)
+      const markdown = generateMarkdown(
+        report,
+        createFakeFileContents([{ filename: 'src/test.ts', numberOfLines: 15 }]),
+      )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/gap-2-plus-lines.snap.md')
     })

@@ -4,7 +4,8 @@ import type { CoverageMetrics, CoverageReport, FileCoverage, LineCoverage, Packa
 const COVERAGE_ICONS = {
   covered: '🟩',
   partial: '🟨',
-  'not-covered': '🔳',
+  'not-covered': '🟥',
+  'no-info': '⬜',
 } as const
 
 /** Options for markdown generation */
@@ -157,7 +158,7 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], fileLines: string
   for (const lineNum of interestingLineNumbers) {
     // Add context before and after
     for (let i = lineNum - numberOfSurroundingLines; i <= lineNum + numberOfSurroundingLines; i++) {
-      if (lineMap.has(i)) {
+      if (i >= 1 && (i <= fileLines.length || lineMap.has(i))) {
         linesToShow.add(i)
       }
     }
@@ -192,31 +193,26 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], fileLines: string
 
   for (const lineNum of linesToShowArray) {
     const line = lineMap.get(lineNum)
-    if (!line) continue
 
     // Check for gap and handle ellipsis
     if (prevLineNumber !== -1 && lineNum > prevLineNumber + 1) {
       const gapSize = lineNum - prevLineNumber - 1
 
-      // If gap is just 1 line, show the actual line (if we have content for it)
+      // If gap is just 1 line, show the actual line
       if (gapSize === 1) {
         const gapLineNum = prevLineNumber + 1
         const gapLine = lineMap.get(gapLineNum)
-        if (gapLine) {
-          const gapIcon = COVERAGE_ICONS[gapLine.state]
-          const gapLineNumStr = gapLineNum.toString().padStart(3, ' ')
-          const gapContent = getLineContent(gapLineNum)
-          outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
-        } else {
-          outputLines.push('...')
-        }
+        const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
+        const gapLineNumStr = gapLineNum.toString().padStart(3, ' ')
+        const gapContent = getLineContent(gapLineNum)
+        outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
       } else {
         // 2+ line gap: show single ellipsis
         outputLines.push('...')
       }
     }
 
-    const icon = COVERAGE_ICONS[line.state]
+    const icon = line ? COVERAGE_ICONS[line.state] : COVERAGE_ICONS['no-info']
     const lineNumStr = lineNum.toString().padStart(3, ' ')
     const content = getLineContent(lineNum)
     outputLines.push(`${lineNumStr} ${icon} ${content}`)

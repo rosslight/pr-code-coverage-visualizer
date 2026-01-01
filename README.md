@@ -65,9 +65,9 @@ jobs:
 
 ```rs
 ...
- 9 🔳 pub fn add(a: int, b: int) -> int {
-10 🔳    return a + b
-11 🔳 }
+ 9 🟥 pub fn add(a: int, b: int) -> int {
+10 🟥    return a + b
+11 🟥 }
 ...
 41 🟩 pub fn add(a: int, b: int) -> int {
 42 🟩    return a + b
@@ -81,15 +81,15 @@ jobs:
 
 ```cs
 ...
- 8 🔳 pub int add(int a, int b)
- 9 🔳 {
-10 🔳     return a + b
-11 🔳 }
+ 8 🟥 pub int add(int a, int b)
+ 9 🟥 {
+10 🟥     return a + b
+11 🟥 }
 ...
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered
 
 ## Development
 

@@ -6,11 +6,12 @@
 
 ```typescript
 ...
-  2 🟩 const value2 = 2;
-  3 🔳 const value3 = 3;
-  4 🟨 const value4 = 4;
+  2 🟩 some content in line 2
+  3 🟥 some content in line 3
+  4 🟨 some content in line 4
+  5 ⬜ some content in line 5
 ...
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

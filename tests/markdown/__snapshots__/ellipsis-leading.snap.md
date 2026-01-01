@@ -5,10 +5,11 @@
 
 ```typescript
 ...
-  5 🔳 line 5
-  6 🟩 line 6
+  4 ⬜ some content in line 4
+  5 🟥 some content in line 5
+  6 🟩 some content in line 6
 ...
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

@@ -5,10 +5,12 @@
 
 ```csharp
 ...
-  5 🔳 var value5 = 5;
-  6 🔳 var value6 = 6;
+  4 ⬜ some content in line 4
+  5 🟥 some content in line 5
+  6 🟥 some content in line 6
+  7 ⬜ some content in line 7
 ...
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

@@ -5,11 +5,10 @@
 <details open><summary>src/file2.py</summary>
 
 ```python
-  1 🔳 value1 = 1
-  2 🔳 value2 = 2
-  3 🟨 value3 = 3
-...
+  1 🟥 some content in line 1
+  2 🟥 some content in line 2
+  3 🟨 some content in line 3
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

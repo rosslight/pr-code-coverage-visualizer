@@ -4,9 +4,9 @@
 <details open><summary>src/missing.ts</summary>
 
 ```typescript
-  1 🔳 
-  2 🔳 
+  1 🟥 
+  2 🟥 
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

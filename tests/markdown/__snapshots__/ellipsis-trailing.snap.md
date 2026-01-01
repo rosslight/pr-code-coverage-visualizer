@@ -4,11 +4,11 @@
 <details open><summary>src/test.ts</summary>
 
 ```typescript
-  1 🟩 line 1
-  2 🔳 line 2
-  3 🟩 line 3
+  1 🟩 some content in line 1
+  2 🟥 some content in line 2
+  3 🟩 some content in line 3
 ...
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

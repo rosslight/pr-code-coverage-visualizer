@@ -6,9 +6,9 @@
 ```typescript
 ...
  99 🟩 
-100 🔳 
+100 🟥 
 101 🟩 
 ```
 </details>
 
-🔳 Not covered, 🟨 Missing branch coverage, 🟩 Covered
+🟥 Not covered, 🟨 Missing branch coverage, 🟩 Covered

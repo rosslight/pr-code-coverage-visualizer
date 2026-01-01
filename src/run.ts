@@ -69,9 +69,8 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   const pullNumber = await findPullRequestNumber(octokit, context)
 
   if (!pullNumber) {
-    core.info('No pull request found for this commit, skipping comment')
-    core.info('Generated markdown output:')
-    core.info(markdown)
+    core.info('No pull request found for this commit, writing to step summary instead')
+    await core.summary.addRaw(markdown).write()
     return
   }
 

@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import * as fs from 'node:fs/promises'
-import { parseArgs } from 'node:util'
+import { exec } from 'node:child_process'
+import { parseArgs, promisify } from 'node:util'
 import { processCoverage, type Logger } from './core/index.js'
+
+const execAsync = promisify(exec)
 
 /**
  * Logger implementation for CLI that uses console.
@@ -79,6 +82,23 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
+  let baseSha: string | undefined
+  let headSha: string | undefined
+
+  if (values['base-ref']) {
+    try {
+      const { stdout: baseOut } = await execAsync(`git rev-parse ${values['base-ref']}`)
+      baseSha = baseOut.trim()
+
+      const { stdout: headOut } = await execAsync('git rev-parse HEAD')
+      headSha = headOut.trim()
+    } catch (error) {
+      console.warn(
+        `[WARN] Failed to resolve git SHAs for base-ref '${values['base-ref']}': ${error}. Showing all lines instead.`,
+      )
+    }
+  }
+
   // Process coverage
   const result = await processCoverage(
     {
@@ -87,6 +107,7 @@ async function main(): Promise<void> {
       showChangedLinesOnly: values['show-changed-only'] ?? false,
       showGlobOnly: values['show-glob'] ?? '**',
       ...(values['base-ref'] && { baseRef: values['base-ref'] }),
+      ...(baseSha && headSha ? { baseSha, headSha } : {}),
     },
     cliLogger,
   )

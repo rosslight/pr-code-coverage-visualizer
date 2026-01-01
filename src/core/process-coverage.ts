@@ -26,8 +26,16 @@ export type ProcessCoverageInputs = {
   showChangedLinesOnly: boolean
   /** Glob pattern to filter which files to show */
   showGlobOnly: string
-  /** Base ref for git comparison (e.g., 'origin/main', 'HEAD~1') */
-  baseRef?: string | undefined
+  /**
+   * Explicit base commit SHA for comparison.
+   * When provided together with headSha, takes precedence over baseRef.
+   */
+  baseSha?: string | undefined
+  /**
+   * Explicit head commit SHA for comparison.
+   * When provided together with baseSha, takes precedence over baseRef.
+   */
+  headSha?: string | undefined
 }
 
 /**
@@ -120,18 +128,22 @@ export async function processCoverage(
     }
   }
 
-  // Get changed lines using git if filtering is enabled and we have a base ref
+  // Get changed lines using git if filtering is enabled and we have comparison information
   let changedLines: ChangedLinesMap | undefined
-  if (inputs.showChangedLinesOnly && inputs.baseRef) {
-    logger.info(`Getting changed lines from git (comparing against ${inputs.baseRef})...`)
-    try {
-      changedLines = await getChangedLinesFromGit(inputs.baseRef)
-      logger.info(`Found changes in ${changedLines.size} file(s)`)
-    } catch (error) {
-      logger.warning(`Failed to get changed lines from git: ${error}. Showing all lines.`)
+  if (inputs.showChangedLinesOnly) {
+    const { baseSha, headSha } = inputs
+
+    if (baseSha && headSha) {
+      logger.info(`Getting changed lines from git (comparing ${baseSha}..${headSha})...`)
+      try {
+        changedLines = await getChangedLinesFromGit(baseSha, headSha)
+        logger.info(`Found changes in ${changedLines.size} file(s)`)
+      } catch (error) {
+        logger.warning(`Failed to get changed lines from git: ${error}. Showing all lines.`)
+      }
+    } else {
+      logger.info('showChangedLinesOnly is enabled but no comparison SHAs were provided; showing all lines')
     }
-  } else if (inputs.showChangedLinesOnly && !inputs.baseRef) {
-    logger.info('No base ref available, showing all lines')
   }
 
   // Apply filters to the coverage report

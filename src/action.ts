@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import type { Octokit } from '@octokit/action'
 import { processCoverage, type Logger } from './core/index.js'
-import { findPullRequestNumber, getBaseRef, postComment, type Context } from './github.js'
+import { findPullRequestNumber, getComparisonShas, postComment, type Context } from './github.js'
 
 export type Inputs = {
   files: string
@@ -20,8 +20,7 @@ const actionLogger: Logger = {
 }
 
 export const run = async (inputs: Inputs, octokit: Octokit, context: Context): Promise<void> => {
-  // Get the base ref from GitHub context
-  const baseRef = getBaseRef(context) ?? undefined
+  const shas = getComparisonShas(context)
 
   // Process coverage using the core module
   const result = await processCoverage(
@@ -30,7 +29,8 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
       sourceDir: inputs.sourceDir,
       showChangedLinesOnly: inputs.showChangedLinesOnly,
       showGlobOnly: inputs.showGlobOnly,
-      baseRef,
+      baseSha: shas?.baseSha,
+      headSha: shas?.headSha,
     },
     actionLogger,
   )

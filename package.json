@@ -3,8 +3,12 @@
   "scripts": {
     "check": "biome migrate --write && biome check --fix",
     "build": "ncc build --source-map --license licenses.txt src/index.ts",
+    "build:cli": "ncc build --source-map src/cli.ts -o dist-cli",
     "test": "vitest",
     "test:coverage": "vitest run --coverage"
+  },
+  "bin": {
+    "coverage-visualizer": "dist-cli/index.js"
   },
   "type": "module",
   "dependencies": {

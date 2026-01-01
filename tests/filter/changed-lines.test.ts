@@ -326,4 +326,3 @@ index abc123..def456 100644
     expect(result.get('new/path.ts')).toEqual(new Set([2]))
   })
 })
-

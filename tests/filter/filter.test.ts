@@ -315,4 +315,3 @@ describe('applyFilters', () => {
     expect(result.report).toBe(sampleReport)
   })
 })
-

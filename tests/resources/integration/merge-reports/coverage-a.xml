@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage>
+  <sources><source>.</source></sources>
+  <packages>
+    <package name="shared">
+      <classes>
+        <class filename="src/shared.ts">
+          <lines>
+            <line number="1" hits="1" branch="false"/>
+            <line number="2" hits="1" branch="false"/>
+            <line number="3" hits="0" branch="false"/>
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

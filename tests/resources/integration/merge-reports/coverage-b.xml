@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage>
+  <sources><source>.</source></sources>
+  <packages>
+    <package name="shared">
+      <classes>
+        <class filename="src/shared.ts">
+          <lines>
+            <!-- Line 3 now covered in this report -->
+            <line number="3" hits="1" branch="false"/>
+            <line number="4" hits="1" branch="false"/>
+            <line number="5" hits="0" branch="false"/>
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

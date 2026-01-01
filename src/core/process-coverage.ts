@@ -77,7 +77,7 @@ export async function processCoverage(
 
   logger.info(`Looking for coverage files matching: ${filePatterns.join(', ')}`)
 
-  const matchedFiles = await glob(filePatterns, { absolute: true })
+  const matchedFiles = (await glob(filePatterns, { absolute: true })).sort()
 
   if (matchedFiles.length === 0) {
     logger.warning('No coverage files found matching the specified patterns')
@@ -201,9 +201,16 @@ function mergeReports(reports: CoverageReport[]): CoverageReport {
 
     for (const pkg of report.packages) {
       if (packageMap.has(pkg.name)) {
-        // Merge files into existing package
+        // Merge files into existing package, deduplicating by filename (keeping last occurrence)
         const existing = packageMap.get(pkg.name)!
-        existing.files = [...existing.files, ...pkg.files]
+        const fileMap = new Map<string, (typeof existing.files)[0]>()
+        for (const file of existing.files) {
+          fileMap.set(file.filename, file)
+        }
+        for (const file of pkg.files) {
+          fileMap.set(file.filename, file)
+        }
+        existing.files = Array.from(fileMap.values())
       } else {
         packageMap.set(pkg.name, { ...pkg })
       }

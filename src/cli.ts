@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import * as fs from 'node:fs/promises'
-import { exec } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { parseArgs, promisify } from 'node:util'
 import { processCoverage, type Logger } from './core/index.js'
+import { isValidGitRef } from './filter/changed-lines.js'
 
-const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 /**
  * Logger implementation for CLI that uses console.
@@ -86,11 +87,19 @@ async function main(): Promise<void> {
   let headSha: string | undefined
 
   if (values['base-ref']) {
+    // Validate git ref format to prevent argument injection
+    if (!isValidGitRef(values['base-ref'])) {
+      console.error(`Error: Invalid git ref format: ${values['base-ref']}\n`)
+      console.error('Git refs must start with alphanumeric and contain only safe characters.')
+      process.exit(1)
+    }
+
     try {
-      const { stdout: baseOut } = await execAsync(`git rev-parse ${values['base-ref']}`)
+      // Using execFile to prevent shell injection
+      const { stdout: baseOut } = await execFileAsync('git', ['rev-parse', values['base-ref']])
       baseSha = baseOut.trim()
 
-      const { stdout: headOut } = await execAsync('git rev-parse HEAD')
+      const { stdout: headOut } = await execFileAsync('git', ['rev-parse', 'HEAD'])
       headSha = headOut.trim()
     } catch (error) {
       console.warn(

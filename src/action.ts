@@ -7,7 +7,7 @@ export type Inputs = {
   files: string
   updateComment: boolean
   showChangedLinesOnly: boolean
-  showGlobOnly: string
+  globPattern: string
   sourceDir: string
 }
 
@@ -17,6 +17,7 @@ export type Inputs = {
 const actionLogger: Logger = {
   info: (message) => core.info(message),
   warning: (message) => core.warning(message),
+  debug: (message) => core.debug(message),
 }
 
 export const run = async (inputs: Inputs, octokit: Octokit, context: Context): Promise<void> => {
@@ -28,7 +29,7 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
       files: inputs.files,
       sourceDir: inputs.sourceDir,
       showChangedLinesOnly: inputs.showChangedLinesOnly,
-      showGlobOnly: inputs.showGlobOnly,
+      globPattern: inputs.globPattern,
       baseSha: shas?.baseSha,
       headSha: shas?.headSha,
     },

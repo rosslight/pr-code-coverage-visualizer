@@ -5,7 +5,7 @@
 <details open><summary>src/example.ts</summary>
 
 ```typescript
-...
+  1 🟩 some content in line 1
   2 🟩 some content in line 2
   3 🟥 some content in line 3
   4 🟨 some content in line 4

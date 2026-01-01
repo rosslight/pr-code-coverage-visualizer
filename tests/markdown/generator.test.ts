@@ -124,10 +124,7 @@ describe('generateMarkdown', () => {
       ],
     }
 
-    const markdown = generateMarkdown(
-      report,
-      createFakeFileContents([{ filename: 'src/gaps.rs', numberOfLines: 50 }]),
-    )
+    const markdown = generateMarkdown(report, createFakeFileContents([{ filename: 'src/gaps.rs', numberOfLines: 50 }]))
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/line-gaps-ellipsis.snap.md')
     expect(markdown).toContain('...')
@@ -309,9 +306,7 @@ describe('generateMarkdown', () => {
         ],
       }
 
-      const fileContents = new Map([['src/test.ts', ['line 1', 'line 2', 'THE GAP LINE', 'line 4', 'line 5']]])
-
-      const markdown = generateMarkdown(report, fileContents)
+      const markdown = generateMarkdown(report, createFakeFileContents([{ filename: 'src/test.ts', numberOfLines: 5 }]))
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/gap-1-line.snap.md')
     })
@@ -329,10 +324,10 @@ describe('generateMarkdown', () => {
                   { lineNumber: 1, state: 'covered' },
                   { lineNumber: 2, state: 'not-covered' },
                   { lineNumber: 3, state: 'covered' },
-                  // Gap: lines 4-8 not in coverage data
-                  { lineNumber: 9, state: 'covered' },
-                  { lineNumber: 10, state: 'not-covered' },
-                  { lineNumber: 11, state: 'covered' },
+                  // Gap: lines 4-5 not in coverage data
+                  { lineNumber: 6, state: 'covered' },
+                  { lineNumber: 7, state: 'not-covered' },
+                  { lineNumber: 8, state: 'covered' },
                 ],
                 lineMetrics: { covered: 4, total: 6 },
               },
@@ -347,6 +342,60 @@ describe('generateMarkdown', () => {
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/gap-2-plus-lines.snap.md')
+    })
+
+    it('shows actual line 1 instead of leading ellipsis when only 1 line hidden at start', async () => {
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'src/test.ts',
+                // Uncovered line is at 3, so with surrounding=1, lines 2-4 would be shown
+                // Only line 1 is hidden - should show it instead of ellipsis
+                lines: [
+                  { lineNumber: 2, state: 'covered' },
+                  { lineNumber: 3, state: 'not-covered' },
+                  { lineNumber: 4, state: 'covered' },
+                ],
+                lineMetrics: { covered: 3, total: 4 },
+              },
+            ],
+          },
+        ],
+      }
+
+      const markdown = generateMarkdown(report, createFakeFileContents([{ filename: 'src/test.ts', numberOfLines: 6 }]))
+
+      await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-leading-1-line.snap.md')
+    })
+
+    it('shows actual last line instead of trailing ellipsis when only 1 line hidden at end', async () => {
+      const report: CoverageReport = {
+        packages: [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'src/test.ts',
+                // Last shown line is 4, file has 5 lines, so only line 5 is hidden
+                lines: [
+                  { lineNumber: 1, state: 'covered' },
+                  { lineNumber: 2, state: 'covered' },
+                  { lineNumber: 3, state: 'not-covered' },
+                  { lineNumber: 4, state: 'covered' },
+                ],
+                lineMetrics: { covered: 4, total: 5 },
+              },
+            ],
+          },
+        ],
+      }
+
+      const markdown = generateMarkdown(report, createFakeFileContents([{ filename: 'src/test.ts', numberOfLines: 5 }]))
+
+      await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-trailing-1-line.snap.md')
     })
   })
 
@@ -399,11 +448,10 @@ describe('generateMarkdown', () => {
         ],
       }
 
-      const fileContents = new Map([
-        ['src/short.ts', ['line 1', 'line 2', 'line 3']], // Only 3 lines
-      ])
-
-      const markdown = generateMarkdown(report, fileContents)
+      const markdown = generateMarkdown(
+        report,
+        createFakeFileContents([{ filename: 'src/short.ts', numberOfLines: 3 }]),
+      )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/line-exceeds-file-length.snap.md')
     })

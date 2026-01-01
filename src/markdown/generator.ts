@@ -185,8 +185,18 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], fileLines: string
   const lastLineToShow = linesToShowArray[linesToShowArray.length - 1] ?? maxLineInData
 
   // Add leading ellipsis if there's content before the first shown line
+  // If only 1 line is hidden, show the actual line instead of ellipsis
   if (firstLineToShow > 1) {
-    outputLines.push('...')
+    if (firstLineToShow === 2) {
+      // Only line 1 is hidden, show it
+      const gapLine = lineMap.get(1)
+      const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
+      const gapLineNumStr = '1'.padStart(3, ' ')
+      const gapContent = getLineContent(1)
+      outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
+    } else {
+      outputLines.push('...')
+    }
   }
 
   let prevLineNumber = -1
@@ -221,8 +231,19 @@ function generateAnnotatedLines(coverageLines: LineCoverage[], fileLines: string
   }
 
   // Add trailing ellipsis if there's content after the last shown line
+  // If only 1 line is hidden, show the actual line instead of ellipsis
   if (lastLineToShow < fileLines.length) {
-    outputLines.push('...')
+    if (lastLineToShow === fileLines.length - 1) {
+      // Only the last line is hidden, show it
+      const lastLineNum = fileLines.length
+      const gapLine = lineMap.get(lastLineNum)
+      const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
+      const gapLineNumStr = lastLineNum.toString().padStart(3, ' ')
+      const gapContent = getLineContent(lastLineNum)
+      outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
+    } else {
+      outputLines.push('...')
+    }
   }
 
   return outputLines.join('\n')

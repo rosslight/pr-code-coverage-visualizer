@@ -4,11 +4,11 @@
 <details open><summary>src/test.ts</summary>
 
 ```typescript
-  1 🟩 line 1
-  2 🟥 line 2
-  3 🟩 THE GAP LINE
-  4 🟥 line 4
-  5 🟩 line 5
+  1 🟩 some content in line 1
+  2 🟥 some content in line 2
+  3 🟩 some content in line 3
+  4 🟥 some content in line 4
+  5 🟩 some content in line 5
 ```
 </details>
 

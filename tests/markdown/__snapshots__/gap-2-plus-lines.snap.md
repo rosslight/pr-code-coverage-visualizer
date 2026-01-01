@@ -8,9 +8,9 @@
   2 🟥 some content in line 2
   3 🟩 some content in line 3
 ...
-  9 🟩 some content in line 9
- 10 🟥 some content in line 10
- 11 🟩 some content in line 11
+  6 🟩 some content in line 6
+  7 🟥 some content in line 7
+  8 🟩 some content in line 8
 ...
 ```
 </details>

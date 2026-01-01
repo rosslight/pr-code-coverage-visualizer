@@ -59,17 +59,22 @@ export async function findPullRequestNumber(octokit: Octokit, context: Context):
 }
 
 /**
- * Get the base ref for comparison from the context.
- * For pull_request events, this is the base branch.
+ * Get the base and head commit SHAs for comparison from the context.
+ * For pull_request events, these come from the PR payload.
  */
-export function getBaseRef(context: Context): string | null {
+export function getComparisonShas(context: Context): { baseSha: string; headSha: string } | null {
   if ('pull_request' in context.payload) {
-    const prPayload = context.payload as { pull_request?: { base?: { ref?: string } } }
-    const baseRef = prPayload.pull_request?.base?.ref
-    if (baseRef) {
-      return `origin/${baseRef}`
+    const prPayload = context.payload as {
+      pull_request?: {
+        base?: { sha?: string }
+        head?: { sha?: string }
+      }
+    }
+    if (prPayload.pull_request?.base?.sha !== undefined && prPayload.pull_request?.head?.sha !== undefined) {
+      return { baseSha: prPayload.pull_request.base.sha, headSha: prPayload.pull_request.head.sha }
     }
   }
+
   return null
 }
 

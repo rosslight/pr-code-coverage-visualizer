@@ -5,46 +5,15 @@ import type { ChangedLinesMap } from './model.js'
 const execAsync = promisify(exec)
 
 /**
- * Ensure the base ref is available locally by fetching it if needed.
- * This handles the common case where actions/checkout only fetches the PR branch.
+ * Get changed lines by comparing two commits using local git.
+ * Requires the repository to be checked out and both SHAs to be present.
  *
- * @param baseRef - The base ref to ensure is available (e.g., 'origin/main')
- */
-async function ensureBaseRefAvailable(baseRef: string): Promise<void> {
-  // Check if the ref is already available
-  try {
-    await execAsync(`git rev-parse --verify ${baseRef}`)
-    return // Ref exists, nothing to do
-  } catch {
-    // Ref doesn't exist, try to fetch it
-  }
-
-  // Extract branch name from origin/<branch> format
-  const match = baseRef.match(/^origin\/(.+)$/)
-  if (!match) {
-    // Not an origin/ ref, can't fetch it
-    throw new Error(`Base ref '${baseRef}' is not available and cannot be fetched`)
-  }
-
-  const branchName = match[1]
-
-  // Fetch the branch with minimal depth
-  await execAsync(`git fetch origin ${branchName} --depth=1`)
-}
-
-/**
- * Get changed lines by comparing against a base ref using local git.
- * Requires the repository to be checked out.
- *
- * @param baseRef - The base ref to compare against (e.g., 'origin/main', commit SHA)
+ * @param baseSha - The base commit SHA to compare from
+ * @param headSha - The head commit SHA to compare to
  * @returns Map of filename to set of changed line numbers
  */
-export async function getChangedLinesFromGit(baseRef: string): Promise<ChangedLinesMap> {
-  // Ensure the base ref is available (fetch if needed)
-  await ensureBaseRefAvailable(baseRef)
-
-  // Get the unified diff between base ref and HEAD
-  const { stdout: diffOutput } = await execAsync(`git diff ${baseRef}...HEAD`, {
+export async function getChangedLinesFromGit(baseSha: string, headSha: string): Promise<ChangedLinesMap> {
+  const { stdout: diffOutput } = await execAsync(`git diff ${baseSha} ${headSha}`, {
     maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large diffs
   })
 

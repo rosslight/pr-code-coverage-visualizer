@@ -23,6 +23,9 @@ importers:
       glob:
         specifier: ^11.0.0
         version: 11.1.0
+      minimatch:
+        specifier: ^10.1.1
+        version: 10.1.1
     devDependencies:
       '@biomejs/biome':
         specifier: 2.3.10
@@ -36,6 +39,9 @@ importers:
       '@tsconfig/strictest':
         specifier: 2.0.8
         version: 2.0.8
+      '@types/minimatch':
+        specifier: ^6.0.0
+        version: 6.0.0
       '@types/node':
         specifier: 20.19.27
         version: 20.19.27
@@ -504,6 +510,10 @@ packages:
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
+
+  '@types/minimatch@6.0.0':
+    resolution: {integrity: sha512-zmPitbQ8+6zNutpwgcQuLcsEpn/Cj54Kbn7L5pX0Os5kdWplB7xPgEh/g+SWOB/qmows2gpuCaPyduq8ZZRnxA==}
+    deprecated: This is a stub types definition. minimatch provides its own type definitions, so you do not need this installed.
 
   '@types/node@20.19.27':
     resolution: {integrity: sha512-N2clP5pJhB2YnZJ3PIHFk5RkygRX5WO/5f0WC08tp0wd+sv0rsJk3MqWn3CbNmT2J505a5336jaQj4ph1AdMug==}
@@ -1254,6 +1264,10 @@ snapshots:
   '@types/deep-eql@4.0.2': {}
 
   '@types/estree@1.0.6': {}
+
+  '@types/minimatch@6.0.0':
+    dependencies:
+      minimatch: 10.1.1
 
   '@types/node@20.19.27':
     dependencies:

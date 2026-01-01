@@ -34,15 +34,18 @@ jobs:
             coverage/coverage1.xml
             coverage/coverage2.xml
           update-comment: true
+          show-changed-lines-only: true
+          show-glob-only: '**/**'
 ```
 
 ### Inputs
 
-| Name             | Default    | Description                                                     |
-|------------------|------------|-----------------------------------------------------------------|
-| `files`          | (required) | One or multiple files. Can be multiple lines. Glob is supported |
-| `update-comment` | true       | Visualize for changed lines only                                |
-| `path-glob`      | true       | Select subdirectories to show coverage data for                 |
+| Name                      | Default    | Description                                                     |
+|---------------------------|------------|-----------------------------------------------------------------|
+| `files`                   | (required) | One or multiple files. Can be multiple lines. Glob is supported |
+| `update-comment`          | true       | TODO: Update                                                    |
+| `show-changed-lines-only` | true       | If part of a PR, filter coverage data against changed lines     |
+| `show-glob-only`          | '**'    | Select subdirectories to show coverage data for                 |
 
 ### Outputs
 

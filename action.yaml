@@ -9,10 +9,14 @@ inputs:
     description: Whether to update an existing comment instead of creating a new one
     required: false
     default: 'true'
-  path-glob:
+  show-changed-lines-only:
+    description: If part of a PR, filter coverage data against changed lines
+    required: false
+    default: 'true'
+  show-glob-only:
     description: Select subdirectories to show coverage data for
     required: false
-    default: ''
+    default: '**'
   token:
     description: GitHub token for API access
     required: true

@@ -7,7 +7,8 @@ try {
     {
       files: core.getInput('files', { required: true }),
       updateComment: core.getBooleanInput('update-comment'),
-      pathGlob: core.getInput('path-glob'),
+      showChangedLinesOnly: core.getBooleanInput('show-changed-lines-only'),
+      showGlobOnly: core.getInput('show-glob-only') || '**',
     },
     getOctokit(),
     await getContext(),

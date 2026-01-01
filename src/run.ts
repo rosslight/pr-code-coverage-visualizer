@@ -3,13 +3,15 @@ import * as core from '@actions/core'
 import type { Octokit } from '@octokit/action'
 import { glob } from 'glob'
 import { CoberturaCoverageParser, type CoverageReport } from './coverage/index.js'
+import { applyFilters, getChangedLinesFromGit, type ChangedLinesMap, type FilterContext } from './filter/index.js'
 import type { Context } from './github.js'
 import { generateMarkdown } from './markdown/index.js'
 
 export type Inputs = {
   files: string
   updateComment: boolean
-  pathGlob: string
+  showChangedLinesOnly: boolean
+  showGlobOnly: string
 }
 
 export const run = async (inputs: Inputs, octokit: Octokit, context: Context): Promise<void> => {
@@ -44,9 +46,44 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   // Merge all reports into one
   const mergedReport = mergeReports(reports)
 
-  // Collect all unique file paths from the report
+  // Find the pull request (needed for both filtering and posting)
+  const pullNumber = await findPullRequestNumber(octokit, context)
+
+  // Get changed lines using git if filtering is enabled and we have a PR
+  let changedLines: ChangedLinesMap | undefined
+  if (inputs.showChangedLinesOnly) {
+    const baseRef = getBaseRef(context)
+    if (baseRef) {
+      core.info(`Getting changed lines from git (comparing against ${baseRef})...`)
+      try {
+        changedLines = await getChangedLinesFromGit(baseRef)
+        core.info(`Found changes in ${changedLines.size} file(s)`)
+      } catch (error) {
+        core.warning(`Failed to get changed lines from git: ${error}. Showing all lines.`)
+      }
+    } else {
+      core.info('No base ref available, showing all lines')
+    }
+  }
+
+  // Apply filters to the coverage report
+  const filterContext: FilterContext = {
+    options: {
+      globPattern: inputs.showGlobOnly,
+      showChangedLinesOnly: inputs.showChangedLinesOnly,
+    },
+    changedLines,
+  }
+
+  const { report: filteredReport, wasFiltered } = applyFilters(mergedReport, filterContext)
+
+  if (wasFiltered) {
+    core.info('Coverage report filtered based on configuration')
+  }
+
+  // Collect all unique file paths from the filtered report
   const filePaths = new Set<string>()
-  for (const pkg of mergedReport.packages) {
+  for (const pkg of filteredReport.packages) {
     for (const file of pkg.files) {
       filePaths.add(file.filename)
     }
@@ -55,18 +92,15 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   // Read file contents from disk
   const fileContents = await readFileContents([...filePaths])
 
-  // Generate markdown
-  const markdown = generateMarkdown(mergedReport, fileContents)
+  // Generate markdown from filtered report
+  const markdown = generateMarkdown(filteredReport, fileContents)
 
-  // Calculate overall metrics for outputs
+  // Calculate overall metrics for outputs (from original merged report for accuracy)
   const overallMetrics = calculateOverallMetrics(mergedReport)
 
   core.setOutput('line-coverage', overallMetrics.lineCoverage.toFixed(2))
   core.setOutput('branch-coverage', overallMetrics.branchCoverage.toFixed(2))
   core.setOutput('function-coverage', overallMetrics.functionCoverage.toFixed(2))
-
-  // Find the pull request
-  const pullNumber = await findPullRequestNumber(octokit, context)
 
   if (!pullNumber) {
     core.info('No pull request found for this commit, writing to step summary instead')
@@ -160,6 +194,21 @@ async function findPullRequestNumber(octokit: Octokit, context: Context): Promis
   })
 
   return pulls[0]?.number ?? null
+}
+
+/**
+ * Get the base ref for comparison from the context.
+ * For pull_request events, this is the base branch.
+ */
+function getBaseRef(context: Context): string | null {
+  if ('pull_request' in context.payload) {
+    const prPayload = context.payload as { pull_request?: { base?: { ref?: string } } }
+    const baseRef = prPayload.pull_request?.base?.ref
+    if (baseRef) {
+      return `origin/${baseRef}`
+    }
+  }
+  return null
 }
 
 /**

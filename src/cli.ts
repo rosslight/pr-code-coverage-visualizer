@@ -24,6 +24,7 @@ USAGE:
 OPTIONS:
   --files <patterns>       Coverage file patterns (required, comma or newline separated)
   --output <path>          Output file path (optional, prints to stdout if not specified)
+  --source <path>          Source directory for resolving file paths (default: current directory)
   --base-ref <ref>         Git ref to compare against (e.g., origin/main, HEAD~1)
   --show-changed-only      Filter to show only changed lines (requires --base-ref)
   --show-glob <pattern>    Glob pattern to filter which files to show (default: **)
@@ -49,6 +50,7 @@ async function main(): Promise<void> {
     options: {
       files: { type: 'string', short: 'f' },
       output: { type: 'string', short: 'o' },
+      source: { type: 'string', short: 's' },
       'base-ref': { type: 'string', short: 'b' },
       'show-changed-only': { type: 'boolean', default: false },
       'show-glob': { type: 'string', default: '**' },
@@ -81,6 +83,7 @@ async function main(): Promise<void> {
   const result = await processCoverage(
     {
       files: values.files,
+      sourceDir: values.source ?? process.cwd(),
       showChangedLinesOnly: values['show-changed-only'] ?? false,
       showGlobOnly: values['show-glob'] ?? '**',
       ...(values['base-ref'] && { baseRef: values['base-ref'] }),

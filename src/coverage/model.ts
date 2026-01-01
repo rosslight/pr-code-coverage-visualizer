@@ -15,7 +15,10 @@ export type CoverageMetrics = {
 }
 
 export type FileCoverage = {
+  /** Display path (relative to source root) */
   filename: string
+  /** Absolute path for reading file contents (set after path resolution) */
+  resolvedPath?: string
   lines: LineCoverage[]
   lineMetrics: CoverageMetrics
   branchMetrics?: CoverageMetrics
@@ -29,4 +32,6 @@ export type PackageCoverage = {
 
 export type CoverageReport = {
   packages: PackageCoverage[]
+  /** Source paths from Cobertura XML <sources> element */
+  sources?: string[]
 }

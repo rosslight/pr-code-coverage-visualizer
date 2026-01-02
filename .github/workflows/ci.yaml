@@ -70,7 +70,15 @@ jobs:
           npm install -g pnpm@latest-10
           pnpm i
           pnpm run build
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f dist/
-          git commit -m "chore: add dist for ${{ steps.rp_branch.outputs.branch }}"
+
+          if git diff --cached --quiet; then
+            echo "No dist changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: add dist for ${{ steps.release.outputs.tag_name }}"
+          git push origin HEAD:${{ steps.rp_branch.outputs.branch }}

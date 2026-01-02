@@ -19,7 +19,6 @@ jobs:
       - run: pnpm i
       - run: pnpm run check
       - run: pnpm run test:coverage
-      - run: pnpm run build
 
       - name: Integration test
         uses: ./
@@ -44,28 +43,34 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  publish-release:
+  build-dist-on-release-pr:
     runs-on: ubuntu-latest
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: build-and-test
+    if: >
+      github.event_name == 'pull_request' &&
+      startsWith(github.head_ref, 'release-please--') &&
+      github.actor != 'github-actions[bot]'
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6.0.1
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v6.1.0
         with:
           node-version-file: .node-version
       - run: npm install -g pnpm@latest-10
       - run: pnpm i
       - run: pnpm run build
-      - name: Commit dist to release tag
+      - name: Commit dist to release PR branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f dist/
-          git commit -m "chore: add dist for ${{ needs.release-please.outputs.tag_name }}"
-          git push origin HEAD:refs/tags/${{ needs.release-please.outputs.tag_name }} --force
-
+          if git diff --cached --quiet; then
+            echo "No changes in dist to commit"
+            exit 0
+          fi
+          git commit -m "build: add dist for release PR"
+          git push

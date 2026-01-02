@@ -43,35 +43,34 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-
-  build-dist-on-release-pr:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: >
-      github.event_name == 'pull_request' &&
-      startsWith(github.head_ref, 'release-please--') &&
-      github.actor != 'github-actions[bot]'
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
+      - name: Get release PR branch
+        id: rp_branch
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="$(echo '${{ steps.release.outputs.pr }}' | jq -r '.headBranchName')"
+          if [ -z "$BRANCH" ] || [ "$BRANCH" = "null" ]; then
+            echo "Release PR branch not found" >&2
+            echo '${{ steps.release.outputs.pr }}' | jq . >&2
+            exit 1
+          fi
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v6.0.1
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ steps.rp_branch.outputs.branch }}
       - uses: actions/setup-node@v6.1.0
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
         with:
           node-version-file: .node-version
-      - run: npm install -g pnpm@latest-10
-      - run: pnpm i
-      - run: pnpm run build
-      - name: Commit dist to release PR branch
+      - name: Build, and commit
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
         run: |
+          npm install -g pnpm@latest-10
+          pnpm i
+          pnpm run build
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f dist/
-          if git diff --cached --quiet; then
-            echo "No changes in dist to commit"
-            exit 0
-          fi
-          git commit -m "build: add dist for release PR"
-          git push
+          git commit -m "chore: add dist for ${{ steps.rp_branch.outputs.branch }}"

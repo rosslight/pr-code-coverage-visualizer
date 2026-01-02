@@ -19,6 +19,7 @@ jobs:
       - run: pnpm i
       - run: pnpm run check
       - run: pnpm run test:coverage
+      - run: pnpm run build
 
       - name: Integration test
         uses: ./

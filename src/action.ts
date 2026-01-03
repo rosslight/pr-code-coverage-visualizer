@@ -28,7 +28,6 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
     {
       files: inputs.files,
       sourceDir: inputs.sourceDir,
-      showChangedLinesOnly: inputs.showChangedLinesOnly,
       globPattern: inputs.globPattern,
       baseSha: shas?.baseSha,
       headSha: shas?.headSha,
@@ -40,12 +39,11 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
     return
   }
 
-  const { markdown, metrics } = result
+  const { markdown, lineCoverage, branchCoverage } = result
 
   // Set GitHub Actions outputs
-  core.setOutput('line-coverage', metrics.lineCoverage.toFixed(2))
-  core.setOutput('branch-coverage', metrics.branchCoverage.toFixed(2))
-  core.setOutput('function-coverage', metrics.functionCoverage.toFixed(2))
+  core.setOutput('line-coverage', lineCoverage.toFixed(2))
+  core.setOutput('branch-coverage', branchCoverage.toFixed(2))
 
   // Find the pull request (needed for posting)
   const pullNumber = await findPullRequestNumber(octokit, context)

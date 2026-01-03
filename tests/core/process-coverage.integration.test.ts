@@ -1,16 +1,8 @@
 import * as path from 'node:path'
-import { describe, expect, it, vi } from 'vitest'
-import { processCoverage, type Logger } from '../../src/core/process-coverage.js'
+import { describe, expect, it } from 'vitest'
+import { processCoverage, createCliLogger } from '../../src/core/process-coverage.js'
 
 const FIXTURES_DIR = path.join(__dirname, '../resources/integration')
-
-function createTestLogger(): Logger {
-  return {
-    info: vi.fn(),
-    warning: vi.fn(),
-    debug: vi.fn(),
-  }
-}
 
 describe('processCoverage integration', () => {
   it('generates markdown for basic coverage', async () => {
@@ -20,15 +12,13 @@ describe('processCoverage integration', () => {
       {
         files: path.join(testDir, 'coverage.xml'),
         sourceDir: testDir,
-        showChangedLinesOnly: false,
         globPattern: '**/*',
       },
-      createTestLogger(),
+      createCliLogger(true),
     )
 
     expect(result).not.toBeNull()
     await expect(result!.markdown).toMatchFileSnapshot('./__snapshots__/basic-coverage.snap.md')
-    expect(result!.metrics.lineCoverage).toBeCloseTo(75, 0)
   })
 
   it('generates markdown for multiple packages', async () => {
@@ -38,10 +28,9 @@ describe('processCoverage integration', () => {
       {
         files: path.join(testDir, 'coverage.xml'),
         sourceDir: testDir,
-        showChangedLinesOnly: false,
         globPattern: '**/*',
       },
-      createTestLogger(),
+      createCliLogger(true),
     )
 
     expect(result).not.toBeNull()
@@ -55,10 +44,9 @@ describe('processCoverage integration', () => {
       {
         files: path.join(testDir, 'coverage.xml'),
         sourceDir: testDir,
-        showChangedLinesOnly: false,
         globPattern: '**/include/**',
       },
-      createTestLogger(),
+      createCliLogger(true),
     )
 
     expect(result).not.toBeNull()
@@ -74,10 +62,9 @@ describe('processCoverage integration', () => {
       {
         files: `${testDir}/coverage-a.xml,${testDir}/coverage-b.xml`,
         sourceDir: testDir,
-        showChangedLinesOnly: false,
         globPattern: '**/*',
       },
-      createTestLogger(),
+      createCliLogger(true),
     )
 
     expect(result).not.toBeNull()
@@ -89,10 +76,9 @@ describe('processCoverage integration', () => {
       {
         files: '/nonexistent/**/*.xml',
         sourceDir: '.',
-        showChangedLinesOnly: false,
         globPattern: '**/*',
       },
-      createTestLogger(),
+      createCliLogger(true),
     )
 
     expect(result).toBeNull()

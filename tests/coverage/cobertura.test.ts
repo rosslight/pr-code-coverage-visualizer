@@ -15,7 +15,7 @@ describe('CoberturaCoverageParser', () => {
   describe('valid structures', () => {
     it('parses minimal valid cobertura', async () => {
       const content = await loadResource('valid-minimal.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.name).toBe('minimal')
@@ -29,12 +29,11 @@ describe('CoberturaCoverageParser', () => {
       // Metrics
       expect(file.lineMetrics).toEqual({ covered: 1, total: 1 })
       expect(file.branchMetrics).toEqual({ covered: 1, total: 1 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('parses multiple packages', async () => {
       const content = await loadResource('valid-multiple-packages.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(3)
       expect(report.packages[0]!.name).toBe('package.one')
@@ -49,7 +48,6 @@ describe('CoberturaCoverageParser', () => {
       ])
       expect(pkg1File.lineMetrics).toEqual({ covered: 2, total: 2 })
       expect(pkg1File.branchMetrics).toEqual({ covered: 2, total: 2 })
-      expect(pkg1File.methodMetrics).toBeUndefined()
 
       // Package two: mixed coverage
       const pkg2File = report.packages[1]!.files[0]!
@@ -59,19 +57,17 @@ describe('CoberturaCoverageParser', () => {
       ])
       expect(pkg2File.lineMetrics).toEqual({ covered: 1, total: 2 })
       expect(pkg2File.branchMetrics).toEqual({ covered: 1, total: 1 })
-      expect(pkg2File.methodMetrics).toBeUndefined()
 
       // Package three: nothing covered
       const pkg3File = report.packages[2]!.files[0]!
       expect(pkg3File.lines).toEqual([{ lineNumber: 1, state: 'not-covered' }])
       expect(pkg3File.lineMetrics).toEqual({ covered: 0, total: 1 })
       expect(pkg3File.branchMetrics).toBeUndefined()
-      expect(pkg3File.methodMetrics).toBeUndefined()
     })
 
     it('parses multiple classes per package', async () => {
       const content = await loadResource('valid-multiple-classes.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files).toHaveLength(3)
@@ -84,20 +80,17 @@ describe('CoberturaCoverageParser', () => {
       // Verify metrics per file
       expect(files[0]!.lineMetrics).toEqual({ covered: 2, total: 2 })
       expect(files[0]!.branchMetrics).toEqual({ covered: 2, total: 2 })
-      expect(files[0]!.methodMetrics).toBeUndefined()
 
       expect(files[1]!.lineMetrics).toEqual({ covered: 1, total: 2 })
       expect(files[1]!.branchMetrics).toEqual({ covered: 1, total: 1 })
-      expect(files[1]!.methodMetrics).toBeUndefined()
 
       expect(files[2]!.lineMetrics).toEqual({ covered: 1, total: 2 })
       expect(files[2]!.branchMetrics).toEqual({ covered: 1, total: 1 })
-      expect(files[2]!.methodMetrics).toBeUndefined()
     })
 
     it('parses multiple lines with different states and calculates metrics', async () => {
       const content = await loadResource('valid-multiple-lines.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(5)
@@ -110,12 +103,11 @@ describe('CoberturaCoverageParser', () => {
       // Line metrics: 3 covered (1, 2, 4), 2 not covered (3, 5)
       expect(file.lineMetrics).toEqual({ covered: 3, total: 5 })
       expect(file.branchMetrics).toEqual({ covered: 3, total: 3 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('handles single elements (not arrays)', async () => {
       const content = await loadResource('valid-single-elements.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files).toHaveLength(1)
@@ -125,28 +117,27 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lines[0]!.lineNumber).toBe(42)
       expect(file.lineMetrics).toEqual({ covered: 1, total: 1 })
       expect(file.branchMetrics).toEqual({ covered: 1, total: 1 })
-      expect(file.methodMetrics).toBeUndefined()
     })
   })
 
   describe('empty/missing elements', () => {
     it('handles empty packages element', async () => {
       const content = await loadResource('empty-packages.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(0)
     })
 
     it('handles missing packages element', async () => {
       const content = await loadResource('no-packages-element.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(0)
     })
 
     it('handles package with no classes', async () => {
       const content = await loadResource('package-no-classes.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files).toHaveLength(0)
@@ -154,7 +145,7 @@ describe('CoberturaCoverageParser', () => {
 
     it('handles class with no lines', async () => {
       const content = await loadResource('class-no-lines.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files).toHaveLength(1)
@@ -163,14 +154,13 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lines).toHaveLength(0)
       expect(file.lineMetrics).toEqual({ covered: 0, total: 0 })
       expect(file.branchMetrics).toBeUndefined()
-      expect(file.methodMetrics).toBeUndefined()
     })
   })
 
   describe('branch coverage', () => {
     it('marks 100% branch coverage as covered with correct metrics', async () => {
       const content = await loadResource('branch-full-coverage.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' }) // No branch
@@ -181,12 +171,11 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
       // Branch metrics: all branches fully covered (no partial)
       expect(file.branchMetrics).toEqual({ covered: 3, total: 3 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('marks partial branch coverage as partial with correct metrics', async () => {
       const content = await loadResource('branch-partial-coverage.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' }) // No branch
@@ -197,12 +186,11 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
       // Branch metrics: 1 covered (line 1), 2 partial (lines 2, 3) -> covered=1, total=3
       expect(file.branchMetrics).toEqual({ covered: 1, total: 3 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('handles lines without branches', async () => {
       const content = await loadResource('branch-no-coverage.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' })
@@ -211,12 +199,11 @@ describe('CoberturaCoverageParser', () => {
 
       expect(file.lineMetrics).toEqual({ covered: 2, total: 3 })
       expect(file.branchMetrics).toEqual({ covered: 2, total: 2 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('handles lowercase branch="true"', async () => {
       const content = await loadResource('branch-lowercase.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' }) // branch="false"
@@ -226,12 +213,11 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
       // 2 covered (lines 1, 2), 1 partial (line 3) -> covered=2, total=3
       expect(file.branchMetrics).toEqual({ covered: 2, total: 3 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('processes mixed branch scenarios with correct metrics', async () => {
       const content = await loadResource('branch-mixed.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(5)
@@ -245,14 +231,13 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lineMetrics).toEqual({ covered: 4, total: 5 })
       // 3 covered (lines 1, 2, 5), 1 partial (line 3) -> covered=3, total=4
       expect(file.branchMetrics).toEqual({ covered: 3, total: 4 })
-      expect(file.methodMetrics).toBeUndefined()
     })
   })
 
   describe('class merging', () => {
     it('merges multiple classes with same filename', async () => {
       const content = await loadResource('multiple-classes-same-file.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files).toHaveLength(1)
@@ -265,12 +250,11 @@ describe('CoberturaCoverageParser', () => {
       // Merged metrics: 4 covered, 1 not covered (line 11)
       expect(file.lineMetrics).toEqual({ covered: 4, total: 5 })
       expect(file.branchMetrics).toEqual({ covered: 4, total: 4 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('applies correct line merge priority (covered > partial > not-covered)', async () => {
       const content = await loadResource('line-merge-priority.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files).toHaveLength(1)
@@ -289,14 +273,13 @@ describe('CoberturaCoverageParser', () => {
       // 3 covered (lines 5, 10, 15), 1 not-covered (line 1)
       expect(file.lineMetrics).toEqual({ covered: 3, total: 4 })
       expect(file.branchMetrics).toBeDefined()
-      expect(file.methodMetrics).toBeUndefined()
     })
   })
 
   describe('edge values', () => {
     it('handles all lines with zero hits', async () => {
       const content = await loadResource('zero-hits.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(5)
@@ -307,12 +290,11 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lineMetrics).toEqual({ covered: 0, total: 5 })
       // No covered/partial lines, so no branch metrics
       expect(file.branchMetrics).toBeUndefined()
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('handles high hit counts', async () => {
       const content = await loadResource('high-hit-count.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(3)
@@ -322,12 +304,11 @@ describe('CoberturaCoverageParser', () => {
 
       expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
       expect(file.branchMetrics).toEqual({ covered: 3, total: 3 })
-      expect(file.methodMetrics).toBeUndefined()
     })
 
     it('handles various condition-coverage formats', async () => {
       const content = await loadResource('condition-coverage-formats.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(6)
@@ -349,7 +330,6 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lineMetrics).toEqual({ covered: 6, total: 6 })
       // 1 covered (line 1), 5 partial -> covered=1, total=6
       expect(file.branchMetrics).toEqual({ covered: 1, total: 6 })
-      expect(file.methodMetrics).toBeUndefined()
     })
   })
 
@@ -357,18 +337,18 @@ describe('CoberturaCoverageParser', () => {
     it('throws on invalid XML syntax', async () => {
       const content = await loadResource('invalid-xml-syntax.xml')
 
-      await expect(parser.parse(content)).rejects.toThrow()
+      await expect(parser.parse(content, undefined)).rejects.toThrow()
     })
 
     it('throws on missing coverage root element', async () => {
       const content = await loadResource('missing-coverage-root.xml')
 
-      await expect(parser.parse(content)).rejects.toThrow()
+      await expect(parser.parse(content, undefined)).rejects.toThrow()
     })
 
     it('handles missing required attributes', async () => {
       const content = await loadResource('missing-required-attrs.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files.length).toBeGreaterThan(0)
@@ -378,7 +358,7 @@ describe('CoberturaCoverageParser', () => {
   describe('comprehensive metrics', () => {
     it('calculates all metrics correctly for complex file', async () => {
       const content = await loadResource('metrics-comprehensive.xml')
-      const report = await parser.parse(content)
+      const report = await parser.parse(content, undefined)
 
       expect(report.packages).toHaveLength(1)
       const file = report.packages[0]!.files[0]!
@@ -406,7 +386,6 @@ describe('CoberturaCoverageParser', () => {
       expect(file.branchMetrics).toEqual({ covered: 4, total: 6 })
 
       // Method metrics are not currently parsed by the parser
-      expect(file.methodMetrics).toBeUndefined()
     })
   })
 })

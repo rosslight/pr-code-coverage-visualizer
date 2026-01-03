@@ -1,4 +1,4 @@
-import type { CoverageMetrics, CoverageReport, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
+import type { CoverageMetrics, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
 
 /** Emoji indicators for line coverage states */
 const COVERAGE_ICONS = {
@@ -26,17 +26,17 @@ export type MarkdownOptions = {
 }
 
 /**
- * Generate markdown visualization for a coverage report.
+ * Generate markdown visualization for coverage packages.
  * This is a pure function suitable for snapshot testing.
  *
- * @param report - The normalized coverage report
- * @param fileContents - Map of filepath to array of line contents
+ * @param packages - The normalized coverage packages
+ * @param fileContents - Map of resolved (absolute) path to array of line contents
  * @param options - Optional configuration for markdown generation
  * @returns Markdown string representation
  * @throws Error if maxCharacters is below MINIMUM_CHARACTERS
  */
 export function generateMarkdown(
-  report: CoverageReport,
+  packages: PackageCoverage[],
   fileContents: Map<string, string[]>,
   options: MarkdownOptions = {},
 ): string {
@@ -49,12 +49,12 @@ export function generateMarkdown(
   }
 
   // Generate fixed content (badges and legend)
-  const badges = generateCoverageBadges(report)
+  const badges = generateCoverageBadges(packages)
   const legend = generateLegend()
 
   // Generate all package sections with their file contents
   const packageSections: PackageSectionData[] = []
-  for (const pkg of report.packages) {
+  for (const pkg of packages) {
     const sectionData = generatePackageSectionData(pkg, fileContents, numberOfSurroundingLines)
     if (sectionData !== null) {
       packageSections.push(sectionData)
@@ -233,7 +233,7 @@ function generatePackageSectionData(
   // Generate file sections
   const files: FileSectionData[] = []
   for (const file of filesWithUncovered) {
-    const content = fileContents.get(file.filename) ?? []
+    const content = file.resolvedPath ? (fileContents.get(file.resolvedPath) ?? []) : []
     files.push({
       filename: file.filename,
       content: generateFileSection(file, content, numberOfSurroundingLines),
@@ -409,11 +409,11 @@ function generateLegend(): string {
 }
 
 /**
- * Generate coverage badges for the overall report.
+ * Generate coverage badges for the overall packages.
  * Returns badges for Line, Branch, and Function coverage if data is available.
  */
-function generateCoverageBadges(report: CoverageReport): string | null {
-  const metrics = calculateReportMetrics(report)
+function generateCoverageBadges(packages: PackageCoverage[]): string | null {
+  const metrics = calculateReportMetrics(packages)
 
   // Need at least line metrics to generate badges
   if (metrics.lineMetrics.total === 0) {
@@ -421,11 +421,6 @@ function generateCoverageBadges(report: CoverageReport): string | null {
   }
 
   const badges: string[] = []
-
-  // Function/Method coverage badge
-  if (metrics.methodMetrics && metrics.methodMetrics.total > 0) {
-    badges.push(generateBadge('Function Coverage', metrics.methodMetrics))
-  }
 
   // Line coverage badge
   badges.push(generateBadge('Line Coverage', metrics.lineMetrics))
@@ -462,23 +457,19 @@ function getBadgeColor(percent: number): string {
 }
 
 /**
- * Calculate aggregate metrics for the entire report.
+ * Calculate aggregate metrics for the entire packages.
  */
-function calculateReportMetrics(report: CoverageReport): {
+function calculateReportMetrics(packages: PackageCoverage[]): {
   lineMetrics: CoverageMetrics
   branchMetrics?: CoverageMetrics
-  methodMetrics?: CoverageMetrics
 } {
   let lineCovered = 0
   let lineTotal = 0
   let branchCovered = 0
   let branchTotal = 0
-  let methodCovered = 0
-  let methodTotal = 0
   let hasBranchData = false
-  let hasMethodData = false
 
-  for (const pkg of report.packages) {
+  for (const pkg of packages) {
     for (const file of pkg.files) {
       lineCovered += file.lineMetrics.covered
       lineTotal += file.lineMetrics.total
@@ -488,29 +479,18 @@ function calculateReportMetrics(report: CoverageReport): {
         branchCovered += file.branchMetrics.covered
         branchTotal += file.branchMetrics.total
       }
-
-      if (file.methodMetrics) {
-        hasMethodData = true
-        methodCovered += file.methodMetrics.covered
-        methodTotal += file.methodMetrics.total
-      }
     }
   }
 
   const result: {
     lineMetrics: CoverageMetrics
     branchMetrics?: CoverageMetrics
-    methodMetrics?: CoverageMetrics
   } = {
     lineMetrics: { covered: lineCovered, total: lineTotal },
   }
 
   if (hasBranchData) {
     result.branchMetrics = { covered: branchCovered, total: branchTotal }
-  }
-
-  if (hasMethodData) {
-    result.methodMetrics = { covered: methodCovered, total: methodTotal }
   }
 
   return result

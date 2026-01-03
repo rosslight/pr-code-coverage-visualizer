@@ -72,7 +72,7 @@ export class CoberturaCoverageParser implements CoverageParser {
     })
   }
 
-  async parse(content: string): Promise<CoverageReport> {
+  async parse(content: string, filePath: string | undefined): Promise<CoverageReport> {
     const validationResult = XMLValidator.validate(content)
     if (validationResult !== true) {
       throw new Error(`Invalid XML: ${validationResult.err.msg}`)
@@ -87,6 +87,9 @@ export class CoberturaCoverageParser implements CoverageParser {
     const report: CoverageReport = { packages }
     if (sources.length > 0) {
       report.sources = sources
+    }
+    if (filePath !== undefined) {
+      report.hintName = filePath
     }
     return report
   }
@@ -136,9 +139,7 @@ export class CoberturaCoverageParser implements CoverageParser {
           filename,
           lines,
           lineMetrics: this.calculateLineMetrics(lines),
-        }
-        if (branchMetrics) {
-          fileCoverage.branchMetrics = branchMetrics
+          branchMetrics: branchMetrics
         }
         fileMap.set(filename, fileCoverage)
       }

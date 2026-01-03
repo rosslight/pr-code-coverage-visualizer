@@ -210,7 +210,7 @@ function mergeFileCoverage(existing: FileCoverage, incoming: FileCoverage): File
     ...existing,
     lines,
     lineMetrics,
-    branchMetrics: sumMetrics(existing.branchMetrics, incoming.branchMetrics)!,
+    branchMetrics: sumMetrics(existing.branchMetrics, incoming.branchMetrics),
   }
 }
 

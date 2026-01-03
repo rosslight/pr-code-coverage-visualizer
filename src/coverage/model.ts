@@ -15,16 +15,13 @@ export type CoverageMetrics = {
 }
 
 export type FileCoverage = {
-  /** Original filename from coverage XML (immutable, used for lookups and filtering) */
-  originalFilename?: string
   /** Display path (relative to source root, for markdown output) */
   filename: string
   /** Absolute path for reading file contents (set after path resolution) */
   resolvedPath?: string
   lines: LineCoverage[]
   lineMetrics: CoverageMetrics
-  branchMetrics?: CoverageMetrics
-  methodMetrics?: CoverageMetrics
+  branchMetrics?: CoverageMetrics | undefined
 }
 
 export type PackageCoverage = {
@@ -33,6 +30,9 @@ export type PackageCoverage = {
 }
 
 export type CoverageReport = {
+  /** Hint name for logging (e.g., the file path this report was parsed from) */
+  hintName?: string
+  /** The packages that are listed in this coverage report */
   packages: PackageCoverage[]
   /** Source paths from Cobertura XML <sources> element */
   sources?: string[]

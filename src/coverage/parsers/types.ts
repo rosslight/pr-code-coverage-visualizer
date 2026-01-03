@@ -8,7 +8,8 @@ export interface CoverageParser {
   /**
    * Parse coverage data from a string content.
    * @param content - The raw content of the coverage file
+   * @param filePath - The filePath of the coverage file, if present
    * @returns A normalized CoverageReport
    */
-  parse(content: string): Promise<CoverageReport>
+  parse(content: string, filePath: string | undefined): Promise<CoverageReport>
 }

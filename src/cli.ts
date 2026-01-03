@@ -2,25 +2,11 @@
 import * as fs from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import { parseArgs, promisify } from 'node:util'
-import { processCoverage, type Logger } from './core/index.js'
+import { processCoverage } from './core/index.js'
 import { isValidGitRef } from './filter/changed-lines.js'
+import { createCliLogger } from './core/process-coverage.js'
 
 const execFileAsync = promisify(execFile)
-
-/**
- * Create a logger implementation for CLI that uses console.
- * @param verbose - Whether to enable debug logging
- */
-function createCliLogger(verbose: boolean): Logger {
-  const logger: Logger = {
-    info: (message) => console.log(`[INFO] ${message}`),
-    warning: (message) => console.warn(`[WARN] ${message}`),
-  }
-  if (verbose) {
-    logger.debug = (message) => console.log(`[DEBUG] ${message}`)
-  }
-  return logger
-}
 
 /**
  * Print usage information.
@@ -97,7 +83,7 @@ async function main(): Promise<void> {
   let baseSha: string | undefined
   let headSha: string | undefined
 
-  if (values['base-ref']) {
+  if ((values['show-changed-only'] ?? false) && values['base-ref']) {
     // Validate git ref format to prevent argument injection
     if (!isValidGitRef(values['base-ref'])) {
       console.error(`Error: Invalid git ref format: ${values['base-ref']}\n`)
@@ -124,7 +110,6 @@ async function main(): Promise<void> {
     {
       files: values.files,
       sourceDir: values.source ?? process.cwd(),
-      showChangedLinesOnly: values['show-changed-only'] ?? false,
       globPattern: values['show-glob'] ?? '**',
       baseSha,
       headSha,

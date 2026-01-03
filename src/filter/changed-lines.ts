@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import * as path from 'node:path'
 import { promisify } from 'node:util'
 import type { ChangedLinesMap } from './model.js'
 
@@ -35,6 +36,15 @@ async function ensureShaAvailable(sha: string): Promise<void> {
 }
 
 /**
+ * Get the git repository root directory.
+ * @returns Absolute path to the repository root
+ */
+async function getGitRepoRoot(): Promise<string> {
+  const { stdout } = await execFileAsync('git', ['rev-parse', '--show-toplevel'])
+  return stdout.trim()
+}
+
+/**
  * Get changed lines by comparing two commits using local git.
  * Automatically fetches missing commits if needed (for shallow clones).
  *
@@ -47,20 +57,23 @@ export async function getChangedLinesFromGit(baseSha: string, headSha: string): 
   await ensureShaAvailable(baseSha)
   await ensureShaAvailable(headSha)
 
+  const repoRoot = await getGitRepoRoot()
+
   const { stdout: diffOutput } = await execFileAsync('git', ['diff', baseSha, headSha], {
     maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large diffs
   })
 
-  return parseDiffOutput(diffOutput)
+  return parseDiffOutput(diffOutput, repoRoot)
 }
 
 /**
  * Parse full git diff output to extract changed lines per file.
  *
  * @param diffOutput - Full git diff output
+ * @param repoRoot - Root of the git repo, used to obtain absolute paths
  * @returns Map of filename to set of changed line numbers
  */
-export function parseDiffOutput(diffOutput: string): ChangedLinesMap {
+export function parseDiffOutput(diffOutput: string, repoRoot: string): ChangedLinesMap {
   const changedLines: ChangedLinesMap = new Map()
   const lines = diffOutput.split('\n')
 
@@ -72,7 +85,7 @@ export function parseDiffOutput(diffOutput: string): ChangedLinesMap {
     // Parse diff header: diff --git a/path/to/file b/path/to/file
     const diffMatch = line.match(/^diff --git a\/.+ b\/(.+)$/)
     if (diffMatch) {
-      currentFile = diffMatch[1]!
+      currentFile = path.join(repoRoot, diffMatch[1]!)
       continue
     }
 

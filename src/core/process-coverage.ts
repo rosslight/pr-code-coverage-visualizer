@@ -1,7 +1,8 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import {
-  CoberturaCoverageParser, CoverageMetrics,
+  CoberturaCoverageParser,
+  CoverageMetrics,
   type CoverageReport,
   FileCoverage,
   LineCoverage,
@@ -186,8 +187,7 @@ const statePriority: Record<LineCoverageState, number> = {
  * For lines present in only one: use that state.
  */
 function mergeFileCoverage(existing: FileCoverage, incoming: FileCoverage): FileCoverage {
-  const worse = (a: LineCoverage, b: LineCoverage) =>
-      statePriority[a.state] <= statePriority[b.state] ? a : b
+  const worse = (a: LineCoverage, b: LineCoverage) => (statePriority[a.state] <= statePriority[b.state] ? a : b)
 
   const linesByNumber = new Map<number, LineCoverage>()
 
@@ -204,7 +204,7 @@ function mergeFileCoverage(existing: FileCoverage, incoming: FileCoverage): File
   const lineMetrics = { covered: lines.reduce((n, l) => n + (l.state === 'covered' ? 1 : 0), 0), total: lines.length }
 
   const sumMetrics = (a?: CoverageMetrics, b?: CoverageMetrics): CoverageMetrics | undefined =>
-      a && b ? ({ covered: a.covered + b.covered, total: a.total + b.total } as CoverageMetrics) : (a ?? b)
+    a && b ? ({ covered: a.covered + b.covered, total: a.total + b.total } as CoverageMetrics) : (a ?? b)
 
   return {
     ...existing,
@@ -272,7 +272,7 @@ async function mergeReportAndResolveSources(
 /**
  * Calculate overall coverage metrics from a merged packages.
  */
-function calculateOverallMetrics(packages: PackageCoverage[]): {lineCoverage: number; branchCoverage: number;} {
+function calculateOverallMetrics(packages: PackageCoverage[]): { lineCoverage: number; branchCoverage: number } {
   let lineCovered = 0
   let lineTotal = 0
   let branchCovered = 0

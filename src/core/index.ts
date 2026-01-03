@@ -3,5 +3,4 @@ export {
   type Logger,
   type ProcessCoverageInputs,
   type ProcessCoverageResult,
-  type CoverageMetrics,
 } from './process-coverage.js'

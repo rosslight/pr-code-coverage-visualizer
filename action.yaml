@@ -18,7 +18,7 @@ inputs:
     required: false
     default: '**'
   source:
-    description: Source directory for resolving file paths from coverage files
+    description: Fallback source directory for resolving file paths from coverage files
     required: false
     default: ${{ github.workspace }}
   token:
@@ -35,5 +35,5 @@ outputs:
     description: The overall branch coverage percentage
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

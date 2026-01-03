@@ -33,9 +33,9 @@ importers:
       '@octokit/webhooks-types':
         specifier: 7.6.1
         version: 7.6.1
-      '@tsconfig/node20':
-        specifier: 20.1.8
-        version: 20.1.8
+      '@tsconfig/node24':
+        specifier: 24.0.3
+        version: 24.0.3
       '@tsconfig/strictest':
         specifier: 2.0.8
         version: 2.0.8
@@ -43,14 +43,14 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       '@types/node':
-        specifier: 20.19.27
-        version: 20.19.27
+        specifier: 24.10.4
+        version: 24.10.4
       '@vercel/ncc':
         specifier: 0.38.4
         version: 0.38.4
       '@vitest/coverage-v8':
         specifier: 4.0.16
-        version: 4.0.16(vitest@4.0.16(@types/node@20.19.27))
+        version: 4.0.16(vitest@4.0.16(@types/node@24.10.4))
       pnpm:
         specifier: 10.26.1
         version: 10.26.1
@@ -59,7 +59,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.0.16
-        version: 4.0.16(@types/node@20.19.27)
+        version: 4.0.16(@types/node@24.10.4)
 
 packages:
 
@@ -496,8 +496,8 @@ packages:
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
-  '@tsconfig/node20@20.1.8':
-    resolution: {integrity: sha512-Em+IdPfByIzWRRpqWL4Z7ArLHZGxmc36BxE3jCz9nBFSm+5aLaPMZyjwu4yetvyKXeogWcxik4L1jB5JTWfw7A==}
+  '@tsconfig/node24@24.0.3':
+    resolution: {integrity: sha512-vcERKtKQKHgzt/vfS3Gjasd8SUI2a0WZXpgJURdJsMySpS5+ctgbPfuLj2z/W+w4lAfTWxoN4upKfu2WzIRYnw==}
 
   '@tsconfig/strictest@2.0.8':
     resolution: {integrity: sha512-XnQ7vNz5HRN0r88GYf1J9JJjqtZPiHt2woGJOo2dYqyHGGcd6OLGqSlBB6p1j9mpzja6Oe5BoPqWmeDx6X9rLw==}
@@ -515,8 +515,8 @@ packages:
     resolution: {integrity: sha512-zmPitbQ8+6zNutpwgcQuLcsEpn/Cj54Kbn7L5pX0Os5kdWplB7xPgEh/g+SWOB/qmows2gpuCaPyduq8ZZRnxA==}
     deprecated: This is a stub types definition. minimatch provides its own type definitions, so you do not need this installed.
 
-  '@types/node@20.19.27':
-    resolution: {integrity: sha512-N2clP5pJhB2YnZJ3PIHFk5RkygRX5WO/5f0WC08tp0wd+sv0rsJk3MqWn3CbNmT2J505a5336jaQj4ph1AdMug==}
+  '@types/node@24.10.4':
+    resolution: {integrity: sha512-vnDVpYPMzs4wunl27jHrfmwojOGKya0xyM3sH+UE5iv5uPS6vX7UIoh6m+vQc5LGBq52HBKPIn/zcSZVzeDEZg==}
 
   '@vercel/ncc@0.38.4':
     resolution: {integrity: sha512-8LwjnlP39s08C08J5NstzriPvW1SP8Zfpp1BvC2sI35kPeZnHfxVkCwu4/+Wodgnd60UtT1n8K8zw+Mp7J9JmQ==}
@@ -845,8 +845,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+  undici-types@7.16.0:
+    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
   undici@5.29.0:
     resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
@@ -1253,7 +1253,7 @@ snapshots:
 
   '@standard-schema/spec@1.0.0': {}
 
-  '@tsconfig/node20@20.1.8': {}
+  '@tsconfig/node24@24.0.3': {}
 
   '@tsconfig/strictest@2.0.8': {}
 
@@ -1269,13 +1269,13 @@ snapshots:
     dependencies:
       minimatch: 10.1.1
 
-  '@types/node@20.19.27':
+  '@types/node@24.10.4':
     dependencies:
-      undici-types: 6.21.0
+      undici-types: 7.16.0
 
   '@vercel/ncc@0.38.4': {}
 
-  '@vitest/coverage-v8@4.0.16(vitest@4.0.16(@types/node@20.19.27))':
+  '@vitest/coverage-v8@4.0.16(vitest@4.0.16(@types/node@24.10.4))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.0.16
@@ -1288,7 +1288,7 @@ snapshots:
       obug: 2.1.1
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.16(@types/node@20.19.27)
+      vitest: 4.0.16(@types/node@24.10.4)
     transitivePeerDependencies:
       - supports-color
 
@@ -1301,13 +1301,13 @@ snapshots:
       chai: 6.2.1
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.16(vite@6.0.11(@types/node@20.19.27))':
+  '@vitest/mocker@4.0.16(vite@6.0.11(@types/node@24.10.4))':
     dependencies:
       '@vitest/spy': 4.0.16
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.0.11(@types/node@20.19.27)
+      vite: 6.0.11(@types/node@24.10.4)
 
   '@vitest/pretty-format@4.0.16':
     dependencies:
@@ -1608,7 +1608,7 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  undici-types@6.21.0: {}
+  undici-types@7.16.0: {}
 
   undici@5.29.0:
     dependencies:
@@ -1618,19 +1618,19 @@ snapshots:
 
   universal-user-agent@7.0.3: {}
 
-  vite@6.0.11(@types/node@20.19.27):
+  vite@6.0.11(@types/node@24.10.4):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.5.1
       rollup: 4.34.0
     optionalDependencies:
-      '@types/node': 20.19.27
+      '@types/node': 24.10.4
       fsevents: 2.3.3
 
-  vitest@4.0.16(@types/node@20.19.27):
+  vitest@4.0.16(@types/node@24.10.4):
     dependencies:
       '@vitest/expect': 4.0.16
-      '@vitest/mocker': 4.0.16(vite@6.0.11(@types/node@20.19.27))
+      '@vitest/mocker': 4.0.16(vite@6.0.11(@types/node@24.10.4))
       '@vitest/pretty-format': 4.0.16
       '@vitest/runner': 4.0.16
       '@vitest/snapshot': 4.0.16
@@ -1647,10 +1647,10 @@ snapshots:
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 6.0.11(@types/node@20.19.27)
+      vite: 6.0.11(@types/node@24.10.4)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 20.19.27
+      '@types/node': 24.10.4
     transitivePeerDependencies:
       - jiti
       - less

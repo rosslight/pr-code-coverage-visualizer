@@ -121,7 +121,7 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
-  const { markdown, metrics } = result
+  const { markdown, lineCoverage, branchCoverage } = result
 
   // Output results
   if (values.output) {
@@ -133,9 +133,8 @@ async function main(): Promise<void> {
 
   // Print metrics summary
   console.log('\n--- Coverage Summary ---')
-  console.log(`Line Coverage:     ${metrics.lineCoverage.toFixed(2)}%`)
-  console.log(`Branch Coverage:   ${metrics.branchCoverage.toFixed(2)}%`)
-  console.log(`Function Coverage: ${metrics.functionCoverage.toFixed(2)}%`)
+  console.log(`Line Coverage:     ${lineCoverage.toFixed(2)}%`)
+  console.log(`Branch Coverage:   ${branchCoverage.toFixed(2)}%`)
 }
 
 main().catch((error) => {

@@ -212,10 +212,10 @@ index abc123..def456 100644
  line 3
  line 4`
 
-    const result = parseDiffOutput(diff)
+    const result = parseDiffOutput(diff, "/root/")
 
     expect(result.size).toBe(1)
-    expect(result.get('src/file.ts')).toEqual(new Set([2]))
+    expect(result.get('/root/src/file.ts')).toEqual(new Set([2]))
   })
 
   it('parses multiple file diffs', () => {
@@ -236,11 +236,11 @@ index 111222..333444 100644
 +added in file2
  line 6`
 
-    const result = parseDiffOutput(diff)
+    const result = parseDiffOutput(diff, "/root/")
 
     expect(result.size).toBe(2)
-    expect(result.get('src/file1.ts')).toEqual(new Set([2]))
-    expect(result.get('src/file2.ts')).toEqual(new Set([6]))
+    expect(result.get('/root/src/file1.ts')).toEqual(new Set([2]))
+    expect(result.get('/root/src/file2.ts')).toEqual(new Set([6]))
   })
 
   it('handles new file', () => {
@@ -254,10 +254,10 @@ index 0000000..abc123
 +line 2
 +line 3`
 
-    const result = parseDiffOutput(diff)
+    const result = parseDiffOutput(diff, "/root/")
 
     expect(result.size).toBe(1)
-    expect(result.get('src/newfile.ts')).toEqual(new Set([1, 2, 3]))
+    expect(result.get('/root/src/newfile.ts')).toEqual(new Set([1, 2, 3]))
   })
 
   it('skips deleted files', () => {
@@ -271,7 +271,7 @@ index abc123..0000000
 -line 2
 -line 3`
 
-    const result = parseDiffOutput(diff)
+    const result = parseDiffOutput(diff, "/root/")
 
     expect(result.size).toBe(0)
   })
@@ -292,16 +292,16 @@ index abc123..def456 100644
  line 13
  line 14`
 
-    const result = parseDiffOutput(diff)
+    const result = parseDiffOutput(diff, "/root/")
 
     expect(result.size).toBe(1)
-    expect(result.get('src/file.ts')).toEqual(new Set([2, 12]))
+    expect(result.get('/root/src/file.ts')).toEqual(new Set([2, 12]))
   })
 
   it('handles empty diff', () => {
     const diff = ''
 
-    const result = parseDiffOutput(diff)
+    const result = parseDiffOutput(diff, "/root/")
 
     expect(result.size).toBe(0)
   })
@@ -320,9 +320,9 @@ index abc123..def456 100644
  line 3
  line 4`
 
-    const result = parseDiffOutput(diff)
+    const result = parseDiffOutput(diff, "/root/")
 
     expect(result.size).toBe(1)
-    expect(result.get('new/path.ts')).toEqual(new Set([2]))
+    expect(result.get('/root/new/path.ts')).toEqual(new Set([2]))
   })
 })

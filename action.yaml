@@ -29,8 +29,6 @@ inputs:
 outputs:
   line-coverage:
     description: The overall line coverage percentage
-  function-coverage:
-    description: The overall function coverage percentage
   branch-coverage:
     description: The overall branch coverage percentage
 

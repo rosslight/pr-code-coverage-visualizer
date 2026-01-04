@@ -20,7 +20,6 @@
 </details>
 
 ### utils
-
 ✓ 🟢 <b>src/utils/format.ts</b> — <b>3/3</b> changed lines covered
 
 ---

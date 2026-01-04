@@ -1079,6 +1079,41 @@ describe('generateMarkdown', () => {
 
         await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-ordering-mixed-coverage.snap.md')
       })
+
+      it('sorts two fully covered files alphabetically', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'zebra.ts',
+                resolvedPath: '/repo/zebra.ts',
+                lines: [{ lineNumber: 1, state: 'covered' }],
+                lineMetrics: { covered: 1, total: 1 },
+              },
+              {
+                filename: 'alpha.ts',
+                resolvedPath: '/repo/alpha.ts',
+                lines: [{ lineNumber: 1, state: 'covered' }],
+                lineMetrics: { covered: 1, total: 1 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
+          ]),
+          { lineCoverage: 100, branchCoverage: 100 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-ordering-two-fully-covered.snap.md')
+      })
     })
   })
 })

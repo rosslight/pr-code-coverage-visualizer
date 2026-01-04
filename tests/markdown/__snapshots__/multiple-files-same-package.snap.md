@@ -16,7 +16,7 @@
   3 🟨 some content in line 3
 ```
 </details>
-✓ 🟢 <b>src/file1.py</b> — <b>2/2</b> changed lines covered
+✓ 🟢 <b>src/file1.py</b> — <b>2/2</b> changed lines covered<br>
 
 ---
 

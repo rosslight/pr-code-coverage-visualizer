@@ -21,7 +21,7 @@
 </details>
 
 ### Package.Core
-✓ 🟢 <b>src/core/utils.cs</b> — <b>3/3</b> changed lines covered
+✓ 🟢 <b>src/core/utils.cs</b> — <b>3/3</b> changed lines covered<br>
 
 ---
 

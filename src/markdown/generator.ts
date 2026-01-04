@@ -556,7 +556,7 @@ function renderFileSection(
 
   // Fully covered - use inline format
   if (!hasUncovered && !hasPartial) {
-    return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered`
+    return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered<br>`
   }
 
   // Has uncovered/partial lines - use details block

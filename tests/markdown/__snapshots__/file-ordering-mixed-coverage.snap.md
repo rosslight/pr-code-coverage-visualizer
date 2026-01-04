@@ -32,7 +32,7 @@
   2 ⬛ some content in line 2
 ```
 </details>
-✓ 🟢 <b>covered.ts</b> — <b>1/1</b> changed lines covered
+✓ 🟢 <b>covered.ts</b> — <b>1/1</b> changed lines covered<br>
 
 ---
 

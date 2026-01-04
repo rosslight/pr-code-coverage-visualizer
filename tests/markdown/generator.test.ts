@@ -8,7 +8,7 @@ type FakeFileInfo = {
 }
 
 /**
- * Generate fake file contents for a coverage report.
+ * Generate fake file contents for a coverage packages.
  * Creates mock lines keyed by resolvedPath.
  */
 function createFakeFileContents(fileInfos: FakeFileInfo[]): Map<string, string[]> {
@@ -25,8 +25,8 @@ function createFakeFileContents(fileInfos: FakeFileInfo[]): Map<string, string[]
 }
 
 describe('generateMarkdown', () => {
-  it('generates markdown for a simple report', async () => {
-    const report: PackageCoverage[] = [
+  it('generates markdown for a simple packages', async () => {
+    const packages: PackageCoverage[] = [
       {
         name: 'TestPackage',
         files: [
@@ -47,15 +47,15 @@ describe('generateMarkdown', () => {
     ]
 
     const markdown = generateMarkdown(
-      report,
+      packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/example.ts', numberOfLines: 10 }]),
     )
 
-    await expect(markdown).toMatchFileSnapshot('./__snapshots__/simple-report.snap.md')
+    await expect(markdown).toMatchFileSnapshot('./__snapshots__/simple-packages.snap.md')
   })
 
   it('generates markdown for multiple packages', async () => {
-    const report: PackageCoverage[] = [
+    const packages: PackageCoverage[] = [
       {
         name: 'Package.Core',
         files: [
@@ -88,7 +88,7 @@ describe('generateMarkdown', () => {
     ]
 
     const markdown = generateMarkdown(
-      report,
+      packages,
       createFakeFileContents([
         { resolvedPath: '/repo/src/core/utils.cs', numberOfLines: 15 },
         { resolvedPath: '/repo/tests/test_utils.cs', numberOfLines: 10 },
@@ -99,7 +99,7 @@ describe('generateMarkdown', () => {
   })
 
   it('generates markdown with line gaps shown as ellipsis', async () => {
-    const report: PackageCoverage[] = [
+    const packages: PackageCoverage[] = [
       {
         name: 'GapsPackage',
         files: [
@@ -123,7 +123,7 @@ describe('generateMarkdown', () => {
     ]
 
     const markdown = generateMarkdown(
-      report,
+      packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/gaps.rs', numberOfLines: 50 }]),
     )
 
@@ -132,20 +132,20 @@ describe('generateMarkdown', () => {
   })
 
   it('generates markdown for empty package', async () => {
-    const report: PackageCoverage[] = [
+    const packages: PackageCoverage[] = [
       {
         name: 'EmptyPackage',
         files: [],
       },
     ]
 
-    const markdown = generateMarkdown(report, createFakeFileContents([]))
+    const markdown = generateMarkdown(packages, createFakeFileContents([]))
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/empty-package.snap.md')
   })
 
   it('generates markdown with multiple files in same package', async () => {
-    const report: PackageCoverage[] = [
+    const packages: PackageCoverage[] = [
       {
         name: 'MultiFilePackage',
         files: [
@@ -174,7 +174,7 @@ describe('generateMarkdown', () => {
     ]
 
     const markdown = generateMarkdown(
-      report,
+      packages,
       createFakeFileContents([
         { resolvedPath: '/repo/src/file1.py', numberOfLines: 3 },
         { resolvedPath: '/repo/src/file2.py', numberOfLines: 3 },
@@ -185,7 +185,7 @@ describe('generateMarkdown', () => {
   })
 
   it('correctly maps file extensions to syntax highlighting', () => {
-    const report: PackageCoverage[] = [
+    const packages: PackageCoverage[] = [
       {
         name: 'ExtensionTest',
         files: [
@@ -212,7 +212,7 @@ describe('generateMarkdown', () => {
     ]
 
     const markdown = generateMarkdown(
-      report,
+      packages,
       createFakeFileContents([
         { resolvedPath: '/repo/test.cs', numberOfLines: 1 },
         { resolvedPath: '/repo/test.rs', numberOfLines: 2 },
@@ -227,7 +227,7 @@ describe('generateMarkdown', () => {
 
   describe('ellipsis handling', () => {
     it('prepends ellipsis when file has content before first shown line', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -246,7 +246,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
       )
 
@@ -254,7 +254,7 @@ describe('generateMarkdown', () => {
     })
 
     it('appends ellipsis when file has content after last shown line', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -274,7 +274,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
       )
 
@@ -282,7 +282,7 @@ describe('generateMarkdown', () => {
     })
 
     it('shows actual line instead of ellipsis for 1-line gap', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -304,7 +304,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
       )
 
@@ -312,7 +312,7 @@ describe('generateMarkdown', () => {
     })
 
     it('shows single ellipsis for 2+ line gap', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -336,7 +336,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 15 }]),
       )
 
@@ -344,7 +344,7 @@ describe('generateMarkdown', () => {
     })
 
     it('shows actual line 1 instead of leading ellipsis when only 1 line hidden at start', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -365,7 +365,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 6 }]),
       )
 
@@ -373,7 +373,7 @@ describe('generateMarkdown', () => {
     })
 
     it('shows actual last line instead of trailing ellipsis when only 1 line hidden at end', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -394,7 +394,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
       )
 
@@ -404,7 +404,7 @@ describe('generateMarkdown', () => {
 
   describe('missing file content handling', () => {
     it('renders empty content when file is not found', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -424,13 +424,13 @@ describe('generateMarkdown', () => {
       // Empty map - file not found on disk
       const fileContents = new Map<string, string[]>()
 
-      const markdown = generateMarkdown(report, fileContents)
+      const markdown = generateMarkdown(packages, fileContents)
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-not-found.snap.md')
     })
 
     it('renders empty content when line number exceeds file length', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'TestPackage',
           files: [
@@ -450,7 +450,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/short.ts', numberOfLines: 3 }]),
       )
 
@@ -460,7 +460,7 @@ describe('generateMarkdown', () => {
 
   describe('character limit and truncation', () => {
     it('throws error when maxCharacters is below minimum', () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'Pkg',
           files: [
@@ -475,14 +475,14 @@ describe('generateMarkdown', () => {
       ]
 
       expect(() =>
-        generateMarkdown(report, createFakeFileContents([{ resolvedPath: '/repo/a.ts', numberOfLines: 1 }]), {
+        generateMarkdown(packages, createFakeFileContents([{ resolvedPath: '/repo/a.ts', numberOfLines: 1 }]), {
           maxCharacters: 100,
         }),
       ).toThrow(`maxCharacters must be at least ${MINIMUM_CHARACTERS}`)
     })
 
     it('does not truncate when content fits within limit', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'SmallPkg',
           files: [
@@ -497,7 +497,7 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/small.ts', numberOfLines: 2 }]),
         {
           maxCharacters: 2000,
@@ -509,7 +509,7 @@ describe('generateMarkdown', () => {
     })
 
     it('truncates files from end when limit exceeded', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'MultiFilePkg',
           files: [
@@ -536,13 +536,13 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([
           { resolvedPath: '/repo/file1.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file2.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
         ]),
-        { maxCharacters: 550 },
+        { maxCharacters: 1000 },
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-files.snap.md')
@@ -551,7 +551,7 @@ describe('generateMarkdown', () => {
     })
 
     it('truncates entire packages from end when limit exceeded', async () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'Pkg1',
           files: [
@@ -591,13 +591,13 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([
           { resolvedPath: '/repo/pkg1/a.ts', numberOfLines: 5 },
           { resolvedPath: '/repo/pkg2/b.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/pkg3/c.ts', numberOfLines: 2 },
         ]),
-        { maxCharacters: 500 },
+        { maxCharacters: 900 },
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-packages.snap.md')
@@ -607,7 +607,7 @@ describe('generateMarkdown', () => {
 
     it('shows minimal output with badges and legend when severely limited', async () => {
       // Create multiple files to force truncation at minimum limit
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'LargePkg',
           files: [
@@ -640,26 +640,26 @@ describe('generateMarkdown', () => {
       ]
 
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([
           { resolvedPath: '/repo/file1.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file2.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file4.ts', numberOfLines: 2 },
         ]),
-        { maxCharacters: 500 },
+        { maxCharacters: 1000 },
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-minimal.snap.md')
       // Should always have badges and legend
       expect(markdown).toContain('img.shields.io')
-      expect(markdown).toContain('Not covered')
+      expect(markdown).toContain('uncovered')
       // Should show truncation notice
       expect(markdown).toContain('not shown due to size limit')
     })
 
     it('uses default maxCharacters of 65536 when not specified', () => {
-      const report: PackageCoverage[] = [
+      const packages: PackageCoverage[] = [
         {
           name: 'Pkg',
           files: [
@@ -675,7 +675,7 @@ describe('generateMarkdown', () => {
 
       // Should not throw and should not truncate small content
       const markdown = generateMarkdown(
-        report,
+        packages,
         createFakeFileContents([{ resolvedPath: '/repo/test.ts', numberOfLines: 2 }]),
       )
 

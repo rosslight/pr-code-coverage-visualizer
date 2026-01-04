@@ -5,11 +5,11 @@
 ---
 
 ## PR Coverage
-<b>2/3</b> changed lines covered (Lines: <b>67%</b>, Branches: <b>n/a</b>)
+<b>2/3</b> changed lines covered (Lines: <b>66.67%</b>, Branches: <b>n/a</b>)
 
 ### TestPackage
 <details>
-<summary>🔴 <b>src/short.ts</b> — <b>2/3</b> changed lines covered (Lines: <b>67%</b>, Branches: <b>n/a</b>)</summary>
+<summary>🔴 <b>src/short.ts</b> — <b>2/3</b> changed lines covered (Lines: <b>66.67%</b>, Branches: <b>n/a</b>)</summary>
 
 ```typescript
 ...

@@ -1,6 +1,6 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-50.00%25-yellowgreen.svg?style=flat)
-![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-100.00%25-brightgreen.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-50%25-yellowgreen.svg?style=flat)
+![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-100%25-brightgreen.svg?style=flat)
 
 ---
 
@@ -9,7 +9,7 @@
 
 ### utils
 <details>
-<summary>🔴 <b>src/utils/format.ts</b> — <b>1/3</b> changed lines covered (Lines: <b>33%</b>, Branches: <b>100%</b>)</summary>
+<summary>🔴 <b>src/utils/format.ts</b> — <b>1/3</b> changed lines covered (Lines: <b>33.33%</b>, Branches: <b>100%</b>)</summary>
 
 ```typescript
   1 🟩 export function formatNumber(n: number): string {
@@ -21,7 +21,7 @@
 
 ### core
 <details>
-<summary>🔴 <b>src/core/math.ts</b> — <b>2/3</b> changed lines covered (Lines: <b>67%</b>, Branches: <b>100%</b>)</summary>
+<summary>🔴 <b>src/core/math.ts</b> — <b>2/3</b> changed lines covered (Lines: <b>66.67%</b>, Branches: <b>100%</b>)</summary>
 
 ```typescript
   1 🟩 export function add(a: number, b: number): number {

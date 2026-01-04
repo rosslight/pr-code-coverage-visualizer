@@ -93,7 +93,7 @@ type FileCoverageClassification = {
  * @param fileContents - Map of resolved (absolute) path to array of line contents
  * @param overallMetrics - The overall percentage metrics
  * @param options - Optional configuration for Markdown generation
- * @param logger - Optional logger for emitting log messages
+ * @param logger - Logger for emitting log messages
  * @returns Markdown string representation
  * @throws Error if maxCharacters is below MINIMUM_CHARACTERS
  */

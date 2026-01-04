@@ -418,7 +418,7 @@ function buildMarkdownWithinLimitFileLevel(
   legend: string,
   packageSections: PackageSectionData[],
   maxCharacters: number,
-  logger?: Logger,
+  logger: Logger,
 ): string {
   // Legend with separator is always appended at the end
   const legendWithSeparator = '\n---\n\n' + legend
@@ -480,7 +480,7 @@ function buildMarkdownWithinLimitFileLevel(
     budget.tryAppend(notice + '\n')
 
     if (omittedFiles > 0) {
-      logger?.warning(
+      logger.warning(
         `Truncated ${omittedPackages} packages, ${omittedFiles} files to fit into size constraint of ${maxCharacters} characters`,
       )
     }

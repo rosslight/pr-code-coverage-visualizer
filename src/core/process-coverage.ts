@@ -152,7 +152,7 @@ export async function processCoverage(
     }
   }
   // Generate Markdown from filtered report
-  const markdown = generateMarkdown(filteredPackages, fileContents)
+  const markdown = generateMarkdown(filteredPackages, fileContents, {}, logger)
 
   // Calculate overall metrics for outputs (from original merged report for accuracy)
   const metrics = calculateOverallMetrics(mergedPackages)

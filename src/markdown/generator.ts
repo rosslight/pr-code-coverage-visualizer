@@ -1,4 +1,5 @@
 import type { CoverageMetrics, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
+import type { Logger } from '../core/index.js'
 
 // =============================================================================
 // CONSTANTS
@@ -85,6 +86,7 @@ type FileCoverageClassification = {
  * @param packages - Array of packages
  * @param fileContents - Map of resolved (absolute) path to array of line contents
  * @param options - Optional configuration for Markdown generation
+ * @param logger - Optional logger for emitting log messages
  * @returns Markdown string representation
  * @throws Error if maxCharacters is below MINIMUM_CHARACTERS
  */
@@ -92,6 +94,7 @@ export function generateMarkdown(
   packages: PackageCoverage[],
   fileContents: Map<string, string[]>,
   options: MarkdownOptions = {},
+  logger: Logger,
 ): string {
   const numberOfSurroundingLines = options.numberOfSurroundingLines ?? DEFAULT_MAX_NUMBER_OF_SURROUNDING_LINES
   const maxCharacters = options.maxCharacters ?? DEFAULT_MAX_CHARACTERS
@@ -116,16 +119,14 @@ export function generateMarkdown(
 
   // Step 5: Render markdown with truncation
   if (packageSections.length === 0) {
-    return buildMarkdownForNoUncoveredContent(badges, prMetrics)
+    const markdown = buildMarkdownForNoUncoveredContent(badges, prMetrics)
+    logger.info(`Generated Markdown with ${markdown.length} characters`)
+    return markdown
   }
 
-  return buildMarkdownWithinLimitFileLevel({
-    badges,
-    prMetrics,
-    legend,
-    packageSections,
-    maxCharacters,
-  })
+  const markdown = buildMarkdownWithinLimitFileLevel(badges, prMetrics, legend, packageSections, maxCharacters, logger)
+  logger.info(`Generated Markdown with ${markdown.length} characters`)
+  return markdown
 }
 
 // =============================================================================
@@ -404,15 +405,14 @@ class CharBudget {
 /**
  * Build markdown with truncation at file level when limit exceeded.
  */
-function buildMarkdownWithinLimitFileLevel(params: {
-  badges: string
-  prMetrics: PRMetrics
-  legend: string
-  packageSections: PackageSectionData[]
-  maxCharacters: number
-}): string {
-  const { badges, prMetrics, legend, packageSections, maxCharacters } = params
-
+function buildMarkdownWithinLimitFileLevel(
+  badges: string,
+  prMetrics: PRMetrics,
+  legend: string,
+  packageSections: PackageSectionData[],
+  maxCharacters: number,
+  logger?: Logger,
+): string {
   // Legend with separator is always appended at the end
   const legendWithSeparator = '\n---\n\n' + legend
 
@@ -471,6 +471,12 @@ function buildMarkdownWithinLimitFileLevel(params: {
   if (truncated && (omittedFiles > 0 || omittedPackages > 0)) {
     const notice = renderTruncationNotice(omittedFiles, omittedPackages)
     budget.tryAppend(notice + '\n')
+
+    if (omittedFiles > 0) {
+      logger?.warning(
+        `Truncated ${omittedPackages} packages, ${omittedFiles} files to fit into size constraint of ${maxCharacters} characters`,
+      )
+    }
   }
 
   // Build final output with legend

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { PackageCoverage } from '../../src/coverage/model.js'
 import { generateMarkdown, MINIMUM_CHARACTERS } from '../../src/markdown/index.js'
+import { createCliLogger } from '../../src/core/process-coverage.js'
 
 type FakeFileInfo = {
   resolvedPath: string
   numberOfLines: number
 }
+
+const logger = createCliLogger(true)
 
 /**
  * Generate fake file contents for a coverage packages.
@@ -49,6 +52,8 @@ describe('generateMarkdown', () => {
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/example.ts', numberOfLines: 10 }]),
+      {},
+      logger,
     )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/simple-packages.snap.md')
@@ -93,6 +98,8 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/src/core/utils.cs', numberOfLines: 15 },
         { resolvedPath: '/repo/tests/test_utils.cs', numberOfLines: 10 },
       ]),
+      {},
+      logger,
     )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/multiple-packages.snap.md')
@@ -125,6 +132,8 @@ describe('generateMarkdown', () => {
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/gaps.rs', numberOfLines: 50 }]),
+      {},
+      logger,
     )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/line-gaps-ellipsis.snap.md')
@@ -139,7 +148,7 @@ describe('generateMarkdown', () => {
       },
     ]
 
-    const markdown = generateMarkdown(packages, createFakeFileContents([]))
+    const markdown = generateMarkdown(packages, createFakeFileContents([]), {}, logger)
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/empty-package.snap.md')
   })
@@ -179,6 +188,8 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/src/file1.py', numberOfLines: 3 },
         { resolvedPath: '/repo/src/file2.py', numberOfLines: 3 },
       ]),
+      {},
+      logger,
     )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/multiple-files-same-package.snap.md')
@@ -218,6 +229,8 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/test.rs', numberOfLines: 2 },
         { resolvedPath: '/repo/test.tsx', numberOfLines: 3 },
       ]),
+      {},
+      logger,
     )
 
     expect(markdown).toContain('```csharp')
@@ -248,6 +261,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
+        {},
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-leading.snap.md')
@@ -276,6 +291,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
+        {},
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-trailing.snap.md')
@@ -306,6 +323,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
+        {},
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/gap-1-line.snap.md')
@@ -338,6 +357,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 15 }]),
+        {},
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/gap-2-plus-lines.snap.md')
@@ -367,6 +388,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 6 }]),
+        {},
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-leading-1-line.snap.md')
@@ -396,6 +419,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
+        {},
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/ellipsis-trailing-1-line.snap.md')
@@ -424,7 +449,7 @@ describe('generateMarkdown', () => {
       // Empty map - file not found on disk
       const fileContents = new Map<string, string[]>()
 
-      const markdown = generateMarkdown(packages, fileContents)
+      const markdown = generateMarkdown(packages, fileContents, {}, logger)
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-not-found.snap.md')
     })
@@ -452,6 +477,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/short.ts', numberOfLines: 3 }]),
+        {},
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/line-exceeds-file-length.snap.md')
@@ -475,9 +502,14 @@ describe('generateMarkdown', () => {
       ]
 
       expect(() =>
-        generateMarkdown(packages, createFakeFileContents([{ resolvedPath: '/repo/a.ts', numberOfLines: 1 }]), {
-          maxCharacters: 100,
-        }),
+        generateMarkdown(
+          packages,
+          createFakeFileContents([{ resolvedPath: '/repo/a.ts', numberOfLines: 1 }]),
+          {
+            maxCharacters: 100,
+          },
+          logger,
+        ),
       ).toThrow(`maxCharacters must be at least ${MINIMUM_CHARACTERS}`)
     })
 
@@ -502,6 +534,7 @@ describe('generateMarkdown', () => {
         {
           maxCharacters: 2000,
         },
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-none.snap.md')
@@ -543,6 +576,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
         ]),
         { maxCharacters: 1000 },
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-files.snap.md')
@@ -598,6 +632,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/pkg3/c.ts', numberOfLines: 2 },
         ]),
         { maxCharacters: 900 },
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-packages.snap.md')
@@ -648,6 +683,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/file4.ts', numberOfLines: 2 },
         ]),
         { maxCharacters: 1000 },
+        logger,
       )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/truncation-minimal.snap.md')
@@ -677,6 +713,8 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/test.ts', numberOfLines: 2 }]),
+        {},
+        logger,
       )
 
       expect(markdown).not.toContain('not shown due to size limit')

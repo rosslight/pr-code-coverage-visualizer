@@ -1,6 +1,7 @@
+import assert from 'node:assert'
 import { describe, expect, it } from 'vitest'
+import { createCliLogger, type Logger } from '../../src/core/process-coverage.js'
 import type { PackageCoverage } from '../../src/coverage/model.js'
-import { createCliLogger, Logger } from '../../src/core/process-coverage.js'
 import { filterByChangedLines, filterByGlob } from '../../src/filter/index.js'
 import type { ChangedLinesMap } from '../../src/filter/model.js'
 
@@ -54,28 +55,28 @@ describe('filterByGlob', () => {
   it('matches all files with ** pattern', () => {
     const result = filterByGlob(sampleReport, '**', mockLogger)
     expect(result).toHaveLength(2)
-    expect(result[0]!.files).toHaveLength(3)
-    expect(result[1]!.files).toHaveLength(1)
+    expect(result[0]?.files).toHaveLength(3)
+    expect(result[1]?.files).toHaveLength(1)
   })
 
   it('filters files by directory pattern', () => {
     const result = filterByGlob(sampleReport, '**/src/**', mockLogger)
     expect(result).toHaveLength(1)
-    expect(result[0]!.name).toBe('Package1')
-    expect(result[0]!.files).toHaveLength(2)
+    expect(result[0]?.name).toBe('Package1')
+    expect(result[0]?.files).toHaveLength(2)
   })
 
   it('filters files by extension pattern', () => {
     const result = filterByGlob(sampleReport, '**/*.tsx', mockLogger)
     expect(result).toHaveLength(1)
-    expect(result[0]!.files).toHaveLength(1)
-    expect(result[0]!.files[0]!.filename).toBe('src/components/Button.tsx')
+    expect(result[0]?.files).toHaveLength(1)
+    expect(result[0]?.files[0]?.filename).toBe('src/components/Button.tsx')
   })
 
   it('removes empty packages after filtering', () => {
     const result = filterByGlob(sampleReport, '**/lib/**', mockLogger)
     expect(result).toHaveLength(1)
-    expect(result[0]!.name).toBe('Package2')
+    expect(result[0]?.name).toBe('Package2')
   })
 
   it('returns empty packages array when nothing matches', () => {
@@ -86,8 +87,8 @@ describe('filterByGlob', () => {
   it('supports specific file matching', () => {
     const result = filterByGlob(sampleReport, '**/helper.ts', mockLogger)
     expect(result).toHaveLength(1)
-    expect(result[0]!.files).toHaveLength(1)
-    expect(result[0]!.files[0]!.filename).toBe('src/utils/helper.ts')
+    expect(result[0]?.files).toHaveLength(1)
+    expect(result[0]?.files[0]?.filename).toBe('src/utils/helper.ts')
   })
 })
 
@@ -128,9 +129,10 @@ describe('filterByChangedLines', () => {
     const result = filterByChangedLines(sampleReport, changedLines, mockLogger)
 
     expect(result).toHaveLength(1)
-    expect(result[0]!.files).toHaveLength(1)
+    expect(result[0]?.files).toHaveLength(1)
 
-    const file = result[0]!.files[0]!
+    const file = result[0]?.files[0]
+    assert(file)
     expect(file.filename).toBe('src/file1.ts')
     expect(file.lines).toHaveLength(2)
     expect(file.lines.map((l) => l.lineNumber)).toEqual([2, 4])
@@ -141,7 +143,8 @@ describe('filterByChangedLines', () => {
 
     const result = filterByChangedLines(sampleReport, changedLines, mockLogger)
 
-    const file = result[0]!.files[0]!
+    const file = result[0]?.files[0]
+    assert(file)
     expect(file.lineMetrics.covered).toBe(2) // lines 1 and 3 are covered
     expect(file.lineMetrics.total).toBe(3) // 3 lines total
   })
@@ -151,7 +154,8 @@ describe('filterByChangedLines', () => {
 
     const result = filterByChangedLines(sampleReport, changedLines, mockLogger)
 
-    const file = result[0]!.files[0]!
+    const file = result[0]?.files[0]
+    assert(file)
     expect(file.branchMetrics).toEqual({ covered: 1, total: 2 })
   })
 
@@ -160,8 +164,8 @@ describe('filterByChangedLines', () => {
 
     const result = filterByChangedLines(sampleReport, changedLines, mockLogger)
 
-    expect(result[0]!.files).toHaveLength(1)
-    expect(result[0]!.files[0]!.filename).toBe('src/file1.ts')
+    expect(result[0]?.files).toHaveLength(1)
+    expect(result[0]?.files[0]?.filename).toBe('src/file1.ts')
   })
 
   it('excludes files with empty changed lines set', () => {
@@ -172,7 +176,7 @@ describe('filterByChangedLines', () => {
 
     const result = filterByChangedLines(sampleReport, changedLines, mockLogger)
 
-    expect(result[0]!.files).toHaveLength(1)
+    expect(result[0]?.files).toHaveLength(1)
   })
 
   it('removes packages with no files after filtering', () => {
@@ -215,7 +219,7 @@ describe('filterByChangedLines', () => {
 
     // File without resolvedPath should be included with all its lines
     expect(result).toHaveLength(1)
-    expect(result[0]!.files).toHaveLength(1)
-    expect(result[0]!.files[0]!.lines).toHaveLength(2)
+    expect(result[0]?.files).toHaveLength(1)
+    expect(result[0]?.files[0]?.lines).toHaveLength(2)
   })
 })

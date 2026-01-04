@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { processCoverage, createCliLogger } from '../../src/core/process-coverage.js'
+import { createCliLogger, processCoverage } from '../../src/core/process-coverage.js'
 
 const FIXTURES_DIR = path.join(__dirname, '../resources/integration')
 
@@ -18,7 +18,7 @@ describe('processCoverage integration', () => {
     )
 
     expect(result).not.toBeNull()
-    await expect(result!.markdown).toMatchFileSnapshot('./__snapshots__/basic-coverage.snap.md')
+    await expect(result?.markdown).toMatchFileSnapshot('./__snapshots__/basic-coverage.snap.md')
   })
 
   it('generates markdown for multiple packages', async () => {
@@ -34,7 +34,7 @@ describe('processCoverage integration', () => {
     )
 
     expect(result).not.toBeNull()
-    await expect(result!.markdown).toMatchFileSnapshot('./__snapshots__/multiple-packages.snap.md')
+    await expect(result?.markdown).toMatchFileSnapshot('./__snapshots__/multiple-packages.snap.md')
   })
 
   it('filters files by glob pattern', async () => {
@@ -51,11 +51,11 @@ describe('processCoverage integration', () => {
 
     expect(result).not.toBeNull()
     // Outputs must be computed from the already-filtered data (same as markdown)
-    expect(result!.lineCoverage).toBeCloseTo(50, 5)
-    expect(result!.branchCoverage).toBeCloseTo(75, 5)
-    expect(result!.markdown).toContain('wanted.ts')
-    expect(result!.markdown).not.toContain('ignored.ts')
-    await expect(result!.markdown).toMatchFileSnapshot('./__snapshots__/glob-filter.snap.md')
+    expect(result?.lineCoverage).toBeCloseTo(50, 5)
+    expect(result?.branchCoverage).toBeCloseTo(75, 5)
+    expect(result?.markdown).toContain('wanted.ts')
+    expect(result?.markdown).not.toContain('ignored.ts')
+    await expect(result?.markdown).toMatchFileSnapshot('./__snapshots__/glob-filter.snap.md')
   })
 
   it('merges multiple coverage files', async () => {
@@ -71,7 +71,7 @@ describe('processCoverage integration', () => {
     )
 
     expect(result).not.toBeNull()
-    await expect(result!.markdown).toMatchFileSnapshot('./__snapshots__/merge-reports.snap.md')
+    await expect(result?.markdown).toMatchFileSnapshot('./__snapshots__/merge-reports.snap.md')
   })
 
   it('returns null when no files match pattern', async () => {

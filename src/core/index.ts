@@ -1,6 +1,6 @@
 export {
-  processCoverage,
   type Logger,
   type ProcessCoverageInputs,
   type ProcessCoverageResult,
+  processCoverage,
 } from './process-coverage.js'

@@ -2,16 +2,16 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import {
   CoberturaCoverageParser,
-  CoverageMetrics,
+  type CoverageMetrics,
   type CoverageReport,
-  FileCoverage,
-  LineCoverage,
-  LineCoverageState,
-  PackageCoverage,
+  type FileCoverage,
+  type LineCoverage,
+  type LineCoverageState,
+  type PackageCoverage,
 } from '../coverage/index.js'
-import { filterByChangedLines, filterByGlob, getChangedLinesFromGit, type ChangedLinesMap } from '../filter/index.js'
+import type { PercentageCoverageMetrics } from '../coverage/model.js'
+import { type ChangedLinesMap, filterByChangedLines, filterByGlob, getChangedLinesFromGit } from '../filter/index.js'
 import { generateMarkdown } from '../markdown/index.js'
-import { PercentageCoverageMetrics } from '../coverage/model.js'
 
 /**
  * Logger interface for dependency injection.

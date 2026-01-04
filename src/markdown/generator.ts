@@ -1,5 +1,9 @@
 import type { CoverageMetrics, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
 
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
 /** Emoji indicators for line coverage states */
 const COVERAGE_ICONS = {
   covered: '🟩',
@@ -22,7 +26,11 @@ export const DEFAULT_MAX_NUMBER_OF_SURROUNDING_LINES = 1
 export const DEFAULT_MAX_CHARACTERS = 65536
 
 /** Minimum characters required for meaningful markdown output (badges + legend + notice) */
-export const MINIMUM_CHARACTERS = 500
+export const MINIMUM_CHARACTERS = 900
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 /** Options for markdown generation */
 export type MarkdownOptions = {
@@ -32,13 +40,51 @@ export type MarkdownOptions = {
   maxCharacters?: number
 }
 
+/** PR metrics for summary line */
+type PRMetrics = {
+  coveredLines: number
+  totalLines: number
+  linePercent: number
+  branchPercent: number | null
+}
+
+/** Data structure for a package section with its files */
+type PackageSectionData = {
+  packageName: string
+  header: string
+  files: FileSectionData[]
+  totalUncoveredLines: number
+  totalPartialBranches: number
+}
+
+/** Data structure for a file section */
+type FileSectionData = {
+  filename: string
+  content: string
+  uncoveredLines: number
+  partialBranches: number
+}
+
+/** Classification result for a file's coverage state */
+type FileCoverageClassification = {
+  hasUncovered: boolean
+  hasPartial: boolean
+  uncoveredCount: number
+  partialCount: number
+  statusIcon: string
+}
+
+// =============================================================================
+// PUBLIC API
+// =============================================================================
+
 /**
- * Generate markdown visualization for coverage packages.
+ * Generate Markdown visualization for coverage packages.
  * This is a pure function suitable for snapshot testing.
  *
  * @param packages - Array of packages
  * @param fileContents - Map of resolved (absolute) path to array of line contents
- * @param options - Optional configuration for markdown generation
+ * @param options - Optional configuration for Markdown generation
  * @returns Markdown string representation
  * @throws Error if maxCharacters is below MINIMUM_CHARACTERS
  */
@@ -55,30 +101,21 @@ export function generateMarkdown(
     throw new Error(`maxCharacters must be at least ${MINIMUM_CHARACTERS}, got ${maxCharacters}`)
   }
 
-  // Generate fixed content (badges and legend)
+  // Step 1: Generate fixed content (badges and legend)
   const badges = generateCoverageBadges(packages)
   const legend = generateLegend()
 
-  // Generate all package sections with their file contents
-  const packageSections: PackageSectionData[] = []
-  for (const pkg of packages) {
-    const sectionData = generatePackageSectionData(pkg, fileContents, numberOfSurroundingLines)
-    if (sectionData !== null) {
-      packageSections.push(sectionData)
-    }
-  }
+  // Step 2: Build package section data
+  const packageSections = buildPackageSections(packages, fileContents, numberOfSurroundingLines)
 
-  // Sort packages
+  // Step 3: Sort packages
   sortPackages(packageSections)
 
-  // Calculate PR summary metrics from packages (only files with uncovered lines)
+  // Step 4: Calculate PR metrics
   const prMetrics = calculatePRMetrics(packages)
 
-  // Check if all lines are covered (no package sections with uncovered lines)
-  const hasUncoveredContent = packageSections.length > 0
-
-  if (!hasUncoveredContent) {
-    // No uncovered lines - return badges + summary
+  // Step 5: Render markdown with truncation
+  if (packageSections.length === 0) {
     return buildMarkdownForNoUncoveredContent(badges, prMetrics)
   }
 
@@ -91,119 +128,40 @@ export function generateMarkdown(
   })
 }
 
-function buildMarkdownForNoUncoveredContent(badges: string, prMetrics: PRMetrics): string {
-  const parts: string[] = []
+// =============================================================================
+// CLASSIFICATION & METRICS HELPERS
+// =============================================================================
 
-  // Repo Coverage section
-  parts.push('## Repo Coverage')
-  parts.push(badges)
-  parts.push('')
-  parts.push('---')
-  parts.push('')
+/**
+ * Classify a file's coverage state.
+ * Returns counts and flags for uncovered/partial lines, plus the appropriate status icon.
+ */
+function classifyFileCoverage(file: FileCoverage): FileCoverageClassification {
+  let uncoveredCount = 0
+  let partialCount = 0
 
-  // PR Coverage section
-  parts.push('## PR Coverage')
-  parts.push('')
-  parts.push(generatePRSummaryLine(prMetrics))
-  parts.push('')
-  parts.push('---')
-  parts.push('')
-  parts.push(`<sub>Generated by \`coverage-pr-comment\`</sub>`)
-
-  return parts.join('\n')
-}
-
-function buildMarkdownWithinLimitFileLevel(params: {
-  badges: string
-  prMetrics: PRMetrics
-  legend: string
-  packageSections: PackageSectionData[]
-  maxCharacters: number
-}): string {
-  const { badges, prMetrics, legend, packageSections, maxCharacters } = params
-
-  // Build output with explicit spacing
-  let output = '## Repo Coverage\n'
-  output += badges + '\n'
-  output += '\n---\n\n'
-  output += '## PR Coverage\n'
-  output += generatePRSummaryLine(prMetrics) + '\n\n'
-
-  // We will always include legend at the end, so every "fit" check reserves room for it.
-  const legendWithSeparator = '\n---\n\n' + legend
-  const currentLength = output.length + legendWithSeparator.length
-  if (currentLength > maxCharacters) {
-    // Should not happen with MINIMUM_CHARACTERS, but be safe.
-    return (output + legendWithSeparator).slice(0, maxCharacters)
-  }
-
-  let omittedFiles = 0
-  let omittedPackages = 0
-
-  // Build incrementally: header, then each file
-  for (let p = 0; p < packageSections.length; p++) {
-    const pkg = packageSections[p]!
-
-    // Check if we can include this package header
-    const testOutput = output + pkg.header + '\n'
-    if (testOutput.length + legendWithSeparator.length > maxCharacters) {
-      // Omit this package and all remaining
-      omittedPackages += packageSections.length - p
-      for (let i = p; i < packageSections.length; i++) omittedFiles += packageSections[i]!.files.length
-      break
-    }
-
-    // Include header with empty line after
-    output += pkg.header + '\n'
-
-    for (let f = 0; f < pkg.files.length; f++) {
-      const file = pkg.files[f]!.content
-
-      // Check if we can fit this file
-      // Files are separated by \n\n, last file before --- gets just \n
-      const isLastFile = f === pkg.files.length - 1 && p === packageSections.length - 1
-      const spacingAfter = isLastFile ? '\n' : '\n\n'
-      const testOutputWithFile = output + file + spacingAfter
-      if (testOutputWithFile.length + legendWithSeparator.length > maxCharacters) {
-        // Can't fit this file or remaining files in this package
-        omittedFiles += pkg.files.length - f
-
-        // Also omit all remaining packages completely
-        omittedPackages += packageSections.length - (p + 1)
-        for (let i = p + 1; i < packageSections.length; i++) omittedFiles += packageSections[i]!.files.length
-
-        p = packageSections.length // break outer
-        break
-      }
-
-      // Add file with spacing
-      output += file + spacingAfter
+  for (const line of file.lines) {
+    if (line.state === 'not-covered') {
+      uncoveredCount++
+    } else if (line.state === 'partial') {
+      partialCount++
     }
   }
 
-  // Add truncation notice if anything omitted AND it fits
-  if (omittedFiles > 0 || omittedPackages > 0) {
-    const notice = generateTruncationNotice(omittedFiles, omittedPackages)
-    const testOutputWithNotice = output + notice + '\n\n'
-    if (testOutputWithNotice.length + legendWithSeparator.length <= maxCharacters) {
-      output += notice + '\n\n'
-    }
+  const hasUncovered = uncoveredCount > 0
+  const hasPartial = partialCount > 0
+
+  // Determine status icon: 🔴 if uncovered, 🟠 if only partial, 🟢 if fully covered
+  let statusIcon: string
+  if (hasUncovered) {
+    statusIcon = FILE_STATUS_ICONS.hasUncovered
+  } else if (hasPartial) {
+    statusIcon = FILE_STATUS_ICONS.partialCoverage
+  } else {
+    statusIcon = FILE_STATUS_ICONS.fullyCovered
   }
 
-  // Add horizontal rule and legend
-  output += legendWithSeparator
-
-  // Hard guarantee (should already be true)
-  if (output.length > maxCharacters) output = output.slice(0, maxCharacters)
-  return output
-}
-
-/** PR metrics for summary line */
-type PRMetrics = {
-  coveredLines: number
-  totalLines: number
-  linePercent: number
-  branchPercent: number | null
+  return { hasUncovered, hasPartial, uncoveredCount, partialCount, statusIcon }
 }
 
 /**
@@ -233,104 +191,132 @@ function calculatePRMetrics(packages: PackageCoverage[]): PRMetrics {
   const linePercent = totalLines === 0 ? 0 : (coveredLines / totalLines) * 100
   const branchPercent = hasBranchData && branchTotal > 0 ? (branchCovered / branchTotal) * 100 : null
 
-  return {
-    coveredLines,
-    totalLines,
-    linePercent,
-    branchPercent,
-  }
+  return { coveredLines, totalLines, linePercent, branchPercent }
 }
 
 /**
- * Generate PR summary line.
+ * Calculate aggregate metrics for the entire packages (for badges).
  */
-function generatePRSummaryLine(metrics: PRMetrics): string {
-  if (metrics.totalLines === 0) {
-    return '<b>0/0</b> changed lines covered'
+function calculateReportMetrics(packages: PackageCoverage[]): {
+  lineMetrics: CoverageMetrics
+  branchMetrics?: CoverageMetrics
+} {
+  let lineCovered = 0
+  let lineTotal = 0
+  let branchCovered = 0
+  let branchTotal = 0
+  let hasBranchData = false
+
+  for (const pkg of packages) {
+    for (const file of pkg.files) {
+      lineCovered += file.lineMetrics.covered
+      lineTotal += file.lineMetrics.total
+
+      if (file.branchMetrics) {
+        hasBranchData = true
+        branchCovered += file.branchMetrics.covered
+        branchTotal += file.branchMetrics.total
+      }
+    }
   }
 
-  const linePercentStr = `${Math.round(metrics.linePercent)}%`
-  const branchPercentStr = metrics.branchPercent !== null ? `${Math.round(metrics.branchPercent)}%` : 'n/a'
+  const result: { lineMetrics: CoverageMetrics; branchMetrics?: CoverageMetrics } = {
+    lineMetrics: { covered: lineCovered, total: lineTotal },
+  }
 
-  return `<b>${metrics.coveredLines}/${metrics.totalLines}</b> changed lines covered (Lines: <b>${linePercentStr}</b>, Branches: <b>${branchPercentStr}</b>)`
+  if (hasBranchData) {
+    result.branchMetrics = { covered: branchCovered, total: branchTotal }
+  }
+
+  return result
 }
 
-/** Data structure for a package section with its files */
-type PackageSectionData = {
-  packageName: string
-  header: string
-  files: FileSectionData[]
-  // Metrics for sorting
-  totalUncoveredLines: number
-  totalPartialBranches: number
-}
-
-/** Data structure for a file section */
-type FileSectionData = {
-  filename: string
-  content: string
-  // Metrics for sorting
-  uncoveredLines: number
-  partialBranches: number
-}
+// =============================================================================
+// FORMATTING HELPERS
+// =============================================================================
 
 /**
- * Generate truncation notice with counts of omitted items.
+ * Format a ratio as "covered/total".
  */
-function generateTruncationNotice(omittedFiles: number, omittedPackages: number): string {
-  const parts: string[] = []
-  if (omittedFiles > 0) {
-    parts.push(`${omittedFiles} file(s)`)
-  }
-  if (omittedPackages > 0) {
-    parts.push(`${omittedPackages} package(s)`)
-  }
-  return `... (${parts.join(' and ')} not shown due to size limit)`
+function formatRatio(covered: number, total: number): string {
+  return `${covered}/${total}`
 }
 
 /**
- * Generate package section data without joining into final string.
+ * Format a percentage rounded to nearest integer.
+ */
+function formatPercentRounded(covered: number, total: number): string {
+  if (total === 0) return '0%'
+  return `${Math.round((covered / total) * 100)}%`
+}
+
+/**
+ * Format branch percentage or return "n/a" if no data.
+ */
+function formatBranchPercentOrNA(branchMetrics: CoverageMetrics | undefined): string {
+  if (!branchMetrics || branchMetrics.total === 0) {
+    return 'n/a'
+  }
+  return `${Math.round((branchMetrics.covered / branchMetrics.total) * 100)}%`
+}
+
+// =============================================================================
+// SECTION DATA BUILDERS
+// =============================================================================
+
+/**
+ * Build all package section data from packages.
+ * Only includes packages that have files with uncovered/partial lines.
+ */
+function buildPackageSections(
+  packages: PackageCoverage[],
+  fileContents: Map<string, string[]>,
+  numberOfSurroundingLines: number,
+): PackageSectionData[] {
+  const sections: PackageSectionData[] = []
+
+  for (const pkg of packages) {
+    const sectionData = buildPackageSectionData(pkg, fileContents, numberOfSurroundingLines)
+    if (sectionData !== null) {
+      sections.push(sectionData)
+    }
+  }
+
+  return sections
+}
+
+/**
+ * Build section data for a single package.
  * Returns null if the package has no files with uncovered lines.
  */
-function generatePackageSectionData(
+function buildPackageSectionData(
   pkg: PackageCoverage,
   fileContents: Map<string, string[]>,
   numberOfSurroundingLines: number,
 ): PackageSectionData | null {
-  // Check if package has any files with uncovered lines
-  const hasUncovered = pkg.files.some(hasUncoveredLines)
-
-  // Skip package entirely if all files are fully covered
-  if (!hasUncovered) {
+  if (pkg.files.length === 0) {
     return null
   }
-
-  // Package header - simple H3 format
   const header = `### ${pkg.name}`
-
-  // Generate file sections - need to include all files, not just uncovered
   const files: FileSectionData[] = []
   let totalUncoveredLines = 0
   let totalPartialBranches = 0
 
   for (const file of pkg.files) {
     const content = file.resolvedPath ? (fileContents.get(file.resolvedPath) ?? []) : []
+    const classification = classifyFileCoverage(file)
 
-    // Calculate metrics for sorting
-    const uncoveredLines = file.lines.filter((line) => line.state === 'not-covered').length
-    const partialBranches = file.lines.filter((line) => line.state === 'partial').length
-    totalUncoveredLines += uncoveredLines
-    totalPartialBranches += partialBranches
+    totalUncoveredLines += classification.uncoveredCount
+    totalPartialBranches += classification.partialCount
 
     files.push({
       filename: file.filename,
-      content: generateFileSection(file, content, numberOfSurroundingLines),
-      uncoveredLines,
-      partialBranches,
+      content: renderFileSection(file, content, numberOfSurroundingLines, classification),
+      uncoveredLines: classification.uncoveredCount,
+      partialBranches: classification.partialCount,
     })
   }
 
-  // Sort files within package
   sortFiles(files)
 
   return {
@@ -342,61 +328,273 @@ function generatePackageSectionData(
   }
 }
 
+// =============================================================================
+// MARKDOWN RENDERING
+// =============================================================================
+
 /**
- * Check if a file has any uncovered or partial lines.
+ * Build markdown for case when there are no uncovered lines.
  */
-function hasUncoveredLines(file: FileCoverage): boolean {
-  return file.lines.some((line) => line.state === 'not-covered' || line.state === 'partial')
+function buildMarkdownForNoUncoveredContent(badges: string, prMetrics: PRMetrics): string {
+  const parts: string[] = []
+
+  parts.push('## Repo Coverage')
+  parts.push(badges)
+  parts.push('')
+  parts.push('---')
+  parts.push('')
+  parts.push('## PR Coverage')
+  parts.push('')
+  parts.push(renderPRSummaryLine(prMetrics))
+  parts.push('')
+  parts.push('---')
+  parts.push('')
+  parts.push(`<sub>Generated by \`coverage-pr-comment\`</sub>`)
+
+  return parts.join('\n')
 }
 
 /**
- * Generate a markdown section for a single file.
- * Uses inline format for fully covered files, details block for files with uncovered lines.
+ * Simple budget tracker for building output within a character limit.
+ * Reserves space for a required tail (e.g., legend) and tracks what fits.
  */
-function generateFileSection(file: FileCoverage, fileLines: string[], numberOfSurroundingLines: number): string {
-  const fileHasUncovered = hasUncoveredLines(file)
+class CharBudget {
+  private parts: string[] = []
+  private currentLength = 0
+  private readonly reservedTailLength: number
+  private readonly maxCharacters: number
 
-  if (!fileHasUncovered) {
-    // Fully covered - use inline format
-    const coveredCount = file.lineMetrics.covered
-    const totalCount = file.lineMetrics.total
-    return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${coveredCount}/${totalCount}</b> changed lines covered`
+  constructor(maxCharacters: number, reservedTail: string) {
+    this.maxCharacters = maxCharacters
+    this.reservedTailLength = reservedTail.length
   }
 
-  // Has uncovered lines - use details block
+  /** Current total length including reserved tail. */
+  get totalLength(): number {
+    return this.currentLength + this.reservedTailLength
+  }
+
+  /** Check if adding content would exceed the limit. */
+  wouldExceed(content: string): boolean {
+    return this.currentLength + content.length + this.reservedTailLength > this.maxCharacters
+  }
+
+  /** Try to append content. Returns true if it fits, false otherwise. */
+  tryAppend(content: string): boolean {
+    if (this.wouldExceed(content)) {
+      return false
+    }
+    this.parts.push(content)
+    this.currentLength += content.length
+    return true
+  }
+
+  /** Force append content (used for initial header that must fit). */
+  append(content: string): void {
+    this.parts.push(content)
+    this.currentLength += content.length
+  }
+
+  /** Get the current output without the reserved tail. */
+  getOutput(): string {
+    return this.parts.join('')
+  }
+}
+
+/**
+ * Build markdown with truncation at file level when limit exceeded.
+ */
+function buildMarkdownWithinLimitFileLevel(params: {
+  badges: string
+  prMetrics: PRMetrics
+  legend: string
+  packageSections: PackageSectionData[]
+  maxCharacters: number
+}): string {
+  const { badges, prMetrics, legend, packageSections, maxCharacters } = params
+
+  // Legend with separator is always appended at the end
+  const legendWithSeparator = '\n---\n\n' + legend
+
+  // Build the fixed header
+  const header =
+    '## Repo Coverage\n' + badges + '\n' + '\n---\n\n' + '## PR Coverage\n' + renderPRSummaryLine(prMetrics) + '\n\n'
+
+  // Check if even the header + legend exceeds the limit
+  if (header.length + legendWithSeparator.length > maxCharacters) {
+    return (header + legendWithSeparator).slice(0, maxCharacters)
+  }
+
+  const budget = new CharBudget(maxCharacters, legendWithSeparator)
+  budget.append(header)
+
+  // Track omissions
+  let omittedFiles = 0
+  let omittedPackages = 0
+  let truncated = false
+
+  // Process packages and files
+  packageLoop: for (let p = 0; p < packageSections.length; p++) {
+    const pkg = packageSections[p]!
+
+    // Try to include package header
+    if (!budget.tryAppend(pkg.header + '\n')) {
+      // Can't fit this package header - omit this and all remaining packages
+      omittedPackages += packageSections.length - p
+      for (let i = p; i < packageSections.length; i++) {
+        omittedFiles += packageSections[i]!.files.length
+      }
+      truncated = true
+      break
+    }
+
+    // Process files in this package
+    for (let f = 0; f < pkg.files.length; f++) {
+      const fileContent = pkg.files[f]!.content
+      const isLastFileOverall = f === pkg.files.length - 1 && p === packageSections.length - 1
+      const spacing = isLastFileOverall ? '\n' : '\n\n'
+
+      if (!budget.tryAppend(fileContent + spacing)) {
+        // Can't fit this file - omit remaining files in this package and all remaining packages
+        omittedFiles += pkg.files.length - f
+        omittedPackages += packageSections.length - (p + 1)
+        for (let i = p + 1; i < packageSections.length; i++) {
+          omittedFiles += packageSections[i]!.files.length
+        }
+        truncated = true
+        break packageLoop
+      }
+    }
+  }
+
+  // Add truncation notice if needed and it fits
+  if (truncated && (omittedFiles > 0 || omittedPackages > 0)) {
+    const notice = renderTruncationNotice(omittedFiles, omittedPackages)
+    budget.tryAppend(notice + '\n')
+  }
+
+  // Build final output with legend
+  let output = budget.getOutput() + legendWithSeparator
+
+  // Hard guarantee (should already be true)
+  if (output.length > maxCharacters) {
+    output = output.slice(0, maxCharacters)
+  }
+
+  return output
+}
+
+/**
+ * Render PR summary line.
+ */
+function renderPRSummaryLine(metrics: PRMetrics): string {
+  if (metrics.totalLines === 0) {
+    return '<b>0/0</b> changed lines covered'
+  }
+
+  const linePercentStr = formatPercentRounded(metrics.coveredLines, metrics.totalLines)
+  const branchPercentStr = metrics.branchPercent !== null ? `${Math.round(metrics.branchPercent)}%` : 'n/a'
+
+  return `<b>${formatRatio(metrics.coveredLines, metrics.totalLines)}</b> changed lines covered (Lines: <b>${linePercentStr}</b>, Branches: <b>${branchPercentStr}</b>)`
+}
+
+/**
+ * Render truncation notice with counts of omitted items.
+ */
+function renderTruncationNotice(omittedFiles: number, omittedPackages: number): string {
+  const parts: string[] = []
+  if (omittedFiles > 0) {
+    parts.push(`${omittedFiles} file(s)`)
+  }
+  if (omittedPackages > 0) {
+    parts.push(`${omittedPackages} package(s)`)
+  }
+  return `... (${parts.join(' and ')} not shown due to size limit)`
+}
+
+/**
+ * Render the coverage legend explaining the symbols.
+ */
+function generateLegend(): string {
+  return `<sub>Legend: ${COVERAGE_ICONS['not-covered']} uncovered · ${COVERAGE_ICONS.partial} partial branch · ${COVERAGE_ICONS.covered} covered · ${COVERAGE_ICONS['no-info']} non-executable/blank<br>Generated by \`coverage-pr-comment\`</sub>`
+}
+
+/**
+ * Render coverage badges for the overall packages.
+ */
+function generateCoverageBadges(packages: PackageCoverage[]): string {
+  const metrics = calculateReportMetrics(packages)
+
+  const badges: string[] = []
+  badges.push(renderBadge('Line Coverage', metrics.lineMetrics))
+  badges.push(renderBadge('Branch Coverage', metrics.branchMetrics ?? { covered: 0, total: 0 }))
+  return badges.join('\n')
+}
+
+/**
+ * Render a single shields.io badge markdown.
+ */
+function renderBadge(label: string, metrics?: CoverageMetrics): string {
+  const encodedLabel = encodeURIComponent(label)
+
+  let value: string
+  let color: string
+  if (!metrics || metrics.total === 0) {
+    value = 'n/a'
+    color = 'brightgreen'
+  } else {
+    const percent = (metrics.covered / metrics.total) * 100
+    value = `${percent.toFixed(2)}%`
+    color = getBadgeColor(percent)
+  }
+  const encodedValue = encodeURIComponent(value)
+
+  return `![${label}](https://img.shields.io/badge/${encodedLabel}-${encodedValue}-${color}.svg?style=flat)`
+}
+
+/**
+ * Get badge color based on coverage percentage.
+ */
+function getBadgeColor(percent: number): string {
+  if (percent >= 80) return 'brightgreen'
+  if (percent >= 60) return 'green'
+  if (percent >= 40) return 'yellowgreen'
+  if (percent >= 20) return 'yellow'
+  return 'red'
+}
+
+/**
+ * Render a markdown section for a single file.
+ * Uses inline format for fully covered files, details block for files with uncovered lines.
+ */
+function renderFileSection(
+  file: FileCoverage,
+  fileLines: string[],
+  numberOfSurroundingLines: number,
+  classification: FileCoverageClassification,
+): string {
+  const { hasUncovered, hasPartial, statusIcon } = classification
+
+  // Fully covered - use inline format
+  if (!hasUncovered && !hasPartial) {
+    return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered`
+  }
+
+  // Has uncovered/partial lines - use details block
   const lines: string[] = []
 
-  // Determine file status icon
-  // 🔴 if has uncovered lines, 🟠 if only partial branches (no uncovered), 🟢 if fully covered
-  const fileHasUncoveredLines = file.lines.some((line) => line.state === 'not-covered')
-  const fileHasPartial = file.lines.some((line) => line.state === 'partial')
-  const statusIcon = fileHasUncoveredLines
-    ? FILE_STATUS_ICONS.hasUncovered
-    : fileHasPartial
-      ? FILE_STATUS_ICONS.partialCoverage
-      : FILE_STATUS_ICONS.fullyCovered
+  const linePercent = formatPercentRounded(file.lineMetrics.covered, file.lineMetrics.total)
+  const branchPercent = formatBranchPercentOrNA(file.branchMetrics)
 
-  // Calculate file metrics
-  const coveredCount = file.lineMetrics.covered
-  const totalCount = file.lineMetrics.total
-  const linePercent = totalCount === 0 ? 0 : Math.round((coveredCount / totalCount) * 100)
-  const branchPercent = file.branchMetrics
-    ? file.branchMetrics.total === 0
-      ? 'n/a'
-      : `${Math.round((file.branchMetrics.covered / file.branchMetrics.total) * 100)}%`
-    : 'n/a'
-
-  // Start collapsible details section
   lines.push(`<details>`)
   lines.push(
-    `<summary>${statusIcon} <b>${file.filename}</b> — <b>${coveredCount}/${totalCount}</b> changed lines covered (Lines: <b>${linePercent}%</b>, Branches: <b>${branchPercent}</b>)</summary>`,
+    `<summary>${statusIcon} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered (Lines: <b>${linePercent}</b>, Branches: <b>${branchPercent}</b>)</summary>`,
   )
   lines.push('')
 
-  // Generate code block with coverage annotations
   const extension = getFileExtension(file.filename)
   lines.push('```' + extension)
-  lines.push(generateAnnotatedLines(file.lines, fileLines, numberOfSurroundingLines))
+  lines.push(renderAnnotatedLines(file.lines, fileLines, numberOfSurroundingLines))
   lines.push('```')
   lines.push('</details>')
 
@@ -404,11 +602,49 @@ function generateFileSection(file: FileCoverage, fileLines: string[], numberOfSu
 }
 
 /**
- * Generate annotated line content showing coverage state.
+ * Extract file extension for syntax highlighting.
+ */
+function getFileExtension(filename: string): string {
+  const parts = filename.split('.')
+  if (parts.length < 2) {
+    return ''
+  }
+
+  const lastPart = parts[parts.length - 1]
+  const ext = lastPart ? lastPart.toLowerCase() : ''
+
+  const extensionMap: Record<string, string> = {
+    cs: 'csharp',
+    rs: 'rust',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    py: 'python',
+    rb: 'ruby',
+    go: 'go',
+    java: 'java',
+    kt: 'kotlin',
+    swift: 'swift',
+    cpp: 'cpp',
+    c: 'c',
+    h: 'c',
+    hpp: 'cpp',
+  }
+
+  return extensionMap[ext] || ext
+}
+
+// =============================================================================
+// LINE ANNOTATION
+// =============================================================================
+
+/**
+ * Render annotated line content showing coverage state.
  * Only shows uncovered/partial lines with configurable context lines around them.
  * Uses smart ellipsis handling: shows single lines instead of "..." when gap is small.
  */
-function generateAnnotatedLines(
+function renderAnnotatedLines(
   coverageLines: LineCoverage[],
   fileLines: string[],
   numberOfSurroundingLines: number,
@@ -436,7 +672,6 @@ function generateAnnotatedLines(
   // Expand to include context lines around interesting lines
   const linesToShow = new Set<number>()
   for (const lineNum of interestingLineNumbers) {
-    // Add context before and after
     for (let i = lineNum - numberOfSurroundingLines; i <= lineNum + numberOfSurroundingLines; i++) {
       if (i >= 1 && (i <= fileLines.length || lineMap.has(i))) {
         linesToShow.add(i)
@@ -444,7 +679,6 @@ function generateAnnotatedLines(
     }
   }
 
-  // Convert to sorted array
   const linesToShowArray = [...linesToShow].sort((a, b) => a - b)
 
   // Helper to get line content from fileLines (1-indexed to 0-indexed)
@@ -456,224 +690,92 @@ function generateAnnotatedLines(
     return ''
   }
 
+  // Helper to render a single annotated line
+  const renderLine = (lineNum: number): string => {
+    const line = lineMap.get(lineNum)
+    const icon = line ? COVERAGE_ICONS[line.state] : COVERAGE_ICONS['no-info']
+    const lineNumStr = lineNum.toString().padStart(3, ' ')
+    const content = getLineContent(lineNum)
+    return `${lineNumStr} ${icon} ${content}`
+  }
+
   const outputLines: string[] = []
 
-  // Determine the first and last line numbers in coverage data for ellipsis detection
   const minLineInData = sortedLines[0]?.lineNumber ?? 1
   const maxLineInData = sortedLines[sortedLines.length - 1]?.lineNumber ?? 1
   const firstLineToShow = linesToShowArray[0] ?? minLineInData
   const lastLineToShow = linesToShowArray[linesToShowArray.length - 1] ?? maxLineInData
 
-  // Add leading ellipsis if there's content before the first shown line
-  // If only 1 line is hidden, show the actual line instead of ellipsis
+  // Add leading gap handling
   if (firstLineToShow > 1) {
-    if (firstLineToShow === 2) {
-      // Only line 1 is hidden, show it
-      const gapLine = lineMap.get(1)
-      const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
-      const gapLineNumStr = '1'.padStart(3, ' ')
-      const gapContent = getLineContent(1)
-      outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
-    } else {
-      outputLines.push('...')
-    }
+    outputLines.push(renderGap(0, firstLineToShow, lineMap, getLineContent))
   }
 
   let prevLineNumber = -1
 
   for (const lineNum of linesToShowArray) {
-    const line = lineMap.get(lineNum)
-
-    // Check for gap and handle ellipsis
+    // Handle gap between consecutive shown lines
     if (prevLineNumber !== -1 && lineNum > prevLineNumber + 1) {
-      const gapSize = lineNum - prevLineNumber - 1
-
-      // If gap is just 1 line, show the actual line
-      if (gapSize === 1) {
-        const gapLineNum = prevLineNumber + 1
-        const gapLine = lineMap.get(gapLineNum)
-        const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
-        const gapLineNumStr = gapLineNum.toString().padStart(3, ' ')
-        const gapContent = getLineContent(gapLineNum)
-        outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
-      } else {
-        // 2+ line gap: show single ellipsis
-        outputLines.push('...')
-      }
+      outputLines.push(renderGap(prevLineNumber, lineNum, lineMap, getLineContent))
     }
 
-    const icon = line ? COVERAGE_ICONS[line.state] : COVERAGE_ICONS['no-info']
-    const lineNumStr = lineNum.toString().padStart(3, ' ')
-    const content = getLineContent(lineNum)
-    outputLines.push(`${lineNumStr} ${icon} ${content}`)
-
+    outputLines.push(renderLine(lineNum))
     prevLineNumber = lineNum
   }
 
-  // Add trailing ellipsis if there's content after the last shown line
-  // If only 1 line is hidden, show the actual line instead of ellipsis
+  // Add trailing gap handling
   if (lastLineToShow < fileLines.length) {
-    if (lastLineToShow === fileLines.length - 1) {
-      // Only the last line is hidden, show it
-      const lastLineNum = fileLines.length
-      const gapLine = lineMap.get(lastLineNum)
-      const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
-      const gapLineNumStr = lastLineNum.toString().padStart(3, ' ')
-      const gapContent = getLineContent(lastLineNum)
-      outputLines.push(`${gapLineNumStr} ${gapIcon} ${gapContent}`)
-    } else {
-      outputLines.push('...')
-    }
+    outputLines.push(renderGap(lastLineToShow, fileLines.length + 1, lineMap, getLineContent))
   }
 
   return outputLines.join('\n')
 }
 
 /**
- * Generate the coverage legend explaining the symbols.
+ * Render a gap between two line numbers.
+ * If gap is just 1 line, renders that line; otherwise renders "...".
+ *
+ * @param prevLine - The last shown line (0 if at start)
+ * @param nextLine - The next line to be shown (fileLines.length + 1 if at end)
+ * @param lineMap - The map with available line coverage
+ * @param getLineContent - the callback to get the content based on the line
  */
-function generateLegend(): string {
-  return `<sub>Legend: ${COVERAGE_ICONS['not-covered']} uncovered · ${COVERAGE_ICONS.partial} partial branch · ${COVERAGE_ICONS.covered} covered · ${COVERAGE_ICONS['no-info']} non-executable/blank<br>Generated by \`coverage-pr-comment\`</sub>`
-}
+function renderGap(
+  prevLine: number,
+  nextLine: number,
+  lineMap: Map<number, LineCoverage>,
+  getLineContent: (lineNum: number) => string,
+): string {
+  const gapSize = nextLine - prevLine - 1
 
-/**
- * Generate coverage badges for the overall packages.
- * Returns badges for Line and Branch coverage if data is available.
- * Does NOT include Function/Method coverage badge.
- */
-function generateCoverageBadges(packages: PackageCoverage[]): string {
-  const metrics = calculateReportMetrics(packages)
-
-  const badges: string[] = []
-  badges.push(generateBadge('Line Coverage', metrics.lineMetrics))
-  badges.push(generateBadge('Branch Coverage', metrics.branchMetrics ?? { covered: 0, total: 0 }))
-  return badges.join('\n')
-}
-
-/**
- * Generate a single shields.io badge markdown.
- */
-function generateBadge(label: string, metrics?: CoverageMetrics): string {
-  const encodedLabel = encodeURIComponent(label)
-
-  // For branch coverage with no data (total === 0), use "n/a" instead of percentage
-  let value: string
-  let color: string
-  if (!metrics || metrics.total === 0) {
-    value = 'n/a'
-    color = 'brightgreen'
-  } else {
-    const percent = metrics.total === 0 ? 0 : (metrics.covered / metrics.total) * 100
-    value = `${percent.toFixed(2)}%`
-    color = getBadgeColor(percent)
-  }
-  const encodedValue = encodeURIComponent(value)
-
-  return `![${label}](https://img.shields.io/badge/${encodedLabel}-${encodedValue}-${color}.svg?style=flat)`
-}
-
-/**
- * Get badge color based on coverage percentage.
- */
-function getBadgeColor(percent: number): string {
-  if (percent >= 80) return 'brightgreen'
-  if (percent >= 60) return 'green'
-  if (percent >= 40) return 'yellowgreen'
-  if (percent >= 20) return 'yellow'
-  return 'red'
-}
-
-/**
- * Calculate aggregate metrics for the entire packages.
- */
-function calculateReportMetrics(packages: PackageCoverage[]): {
-  lineMetrics: CoverageMetrics
-  branchMetrics?: CoverageMetrics
-} {
-  let lineCovered = 0
-  let lineTotal = 0
-  let branchCovered = 0
-  let branchTotal = 0
-  let hasBranchData = false
-
-  for (const pkg of packages) {
-    for (const file of pkg.files) {
-      lineCovered += file.lineMetrics.covered
-      lineTotal += file.lineMetrics.total
-
-      if (file.branchMetrics) {
-        hasBranchData = true
-        branchCovered += file.branchMetrics.covered
-        branchTotal += file.branchMetrics.total
-      }
-    }
+  if (gapSize === 1) {
+    // Show the single hidden line
+    const gapLineNum = prevLine + 1
+    const gapLine = lineMap.get(gapLineNum)
+    const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
+    const gapLineNumStr = gapLineNum.toString().padStart(3, ' ')
+    const gapContent = getLineContent(gapLineNum)
+    return `${gapLineNumStr} ${gapIcon} ${gapContent}`
   }
 
-  const result: {
-    lineMetrics: CoverageMetrics
-    branchMetrics?: CoverageMetrics
-  } = {
-    lineMetrics: { covered: lineCovered, total: lineTotal },
-  }
-
-  if (hasBranchData) {
-    result.branchMetrics = { covered: branchCovered, total: branchTotal }
-  }
-
-  return result
+  return '...'
 }
 
-/**
- * Extract file extension for syntax highlighting.
- */
-function getFileExtension(filename: string): string {
-  const parts = filename.split('.')
-  if (parts.length < 2) {
-    return ''
-  }
-
-  const lastPart = parts[parts.length - 1]
-  const ext = lastPart ? lastPart.toLowerCase() : ''
-
-  // Map extensions to markdown code block language identifiers
-  const extensionMap: Record<string, string> = {
-    cs: 'csharp',
-    rs: 'rust',
-    ts: 'typescript',
-    tsx: 'typescript',
-    js: 'javascript',
-    jsx: 'javascript',
-    py: 'python',
-    rb: 'ruby',
-    go: 'go',
-    java: 'java',
-    kt: 'kotlin',
-    swift: 'swift',
-    cpp: 'cpp',
-    c: 'c',
-    h: 'c',
-    hpp: 'cpp',
-  }
-
-  return extensionMap[ext] || ext
-}
+// =============================================================================
+// SORTING
+// =============================================================================
 
 /**
  * Sort packages by uncovered lines, partial branches, then alphabetically.
  */
 function sortPackages(packages: PackageSectionData[]): void {
   packages.sort((a, b) => {
-    // Sort by total uncovered lines (descending)
     if (a.totalUncoveredLines !== b.totalUncoveredLines) {
       return b.totalUncoveredLines - a.totalUncoveredLines
     }
-
-    // Sort by total partial branches (descending)
     if (a.totalPartialBranches !== b.totalPartialBranches) {
       return b.totalPartialBranches - a.totalPartialBranches
     }
-
-    // Alphabetically by package name (ascending)
     return a.packageName.localeCompare(b.packageName)
   })
 }
@@ -684,24 +786,20 @@ function sortPackages(packages: PackageSectionData[]): void {
  */
 function sortFiles(files: FileSectionData[]): void {
   files.sort((a, b) => {
-    // Fully covered files (0 uncovered) come first
     const aIsFullyCovered = a.uncoveredLines === 0
     const bIsFullyCovered = b.uncoveredLines === 0
     if (aIsFullyCovered !== bIsFullyCovered) {
       return aIsFullyCovered ? -1 : 1
     }
 
-    // For files with uncovered lines, sort by uncovered lines (descending)
     if (!aIsFullyCovered && a.uncoveredLines !== b.uncoveredLines) {
       return b.uncoveredLines - a.uncoveredLines
     }
 
-    // Sort by partial branches (descending)
     if (a.partialBranches !== b.partialBranches) {
       return b.partialBranches - a.partialBranches
     }
 
-    // Alphabetically by filename (ascending)
     return a.filename.localeCompare(b.filename)
   })
 }

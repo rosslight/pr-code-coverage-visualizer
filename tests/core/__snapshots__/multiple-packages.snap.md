@@ -5,11 +5,23 @@
 ---
 
 ## PR Coverage
-<b>5/6</b> changed lines covered (Lines: <b>83.33%</b>, Branches: <b>100%</b>)
+<b>3/6</b> changed lines covered (Lines: <b>50%</b>, Branches: <b>100%</b>)
+
+### utils
+<details>
+<summary>🔴 <b>src/utils/format.ts</b> — <b>1/3</b> changed lines covered (Lines: <b>33%</b>, Branches: <b>100%</b>)</summary>
+
+```typescript
+  1 🟩 export function formatNumber(n: number): string {
+  2 🟥   return n.toFixed(2)
+  3 🟥 }
+  4 ⬛ 
+```
+</details>
 
 ### core
 <details>
-<summary>🔴 <b>src/core/math.ts</b> — <b>2/3</b> changed lines covered (Lines: <b>67.00%</b>, Branches: <b>100%</b>)</summary>
+<summary>🔴 <b>src/core/math.ts</b> — <b>2/3</b> changed lines covered (Lines: <b>67%</b>, Branches: <b>100%</b>)</summary>
 
 ```typescript
   1 🟩 export function add(a: number, b: number): number {
@@ -18,9 +30,6 @@
   4 ⬛ 
 ```
 </details>
-
-### utils
-✓ 🟢 <b>src/utils/format.ts</b> — <b>3/3</b> changed lines covered
 
 ---
 

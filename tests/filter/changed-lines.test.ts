@@ -212,7 +212,7 @@ index abc123..def456 100644
  line 3
  line 4`
 
-    const result = parseDiffOutput(diff, "/root/")
+    const result = parseDiffOutput(diff, '/root/')
 
     expect(result.size).toBe(1)
     expect(result.get('/root/src/file.ts')).toEqual(new Set([2]))
@@ -236,7 +236,7 @@ index 111222..333444 100644
 +added in file2
  line 6`
 
-    const result = parseDiffOutput(diff, "/root/")
+    const result = parseDiffOutput(diff, '/root/')
 
     expect(result.size).toBe(2)
     expect(result.get('/root/src/file1.ts')).toEqual(new Set([2]))
@@ -254,7 +254,7 @@ index 0000000..abc123
 +line 2
 +line 3`
 
-    const result = parseDiffOutput(diff, "/root/")
+    const result = parseDiffOutput(diff, '/root/')
 
     expect(result.size).toBe(1)
     expect(result.get('/root/src/newfile.ts')).toEqual(new Set([1, 2, 3]))
@@ -271,7 +271,7 @@ index abc123..0000000
 -line 2
 -line 3`
 
-    const result = parseDiffOutput(diff, "/root/")
+    const result = parseDiffOutput(diff, '/root/')
 
     expect(result.size).toBe(0)
   })
@@ -292,7 +292,7 @@ index abc123..def456 100644
  line 13
  line 14`
 
-    const result = parseDiffOutput(diff, "/root/")
+    const result = parseDiffOutput(diff, '/root/')
 
     expect(result.size).toBe(1)
     expect(result.get('/root/src/file.ts')).toEqual(new Set([2, 12]))
@@ -301,7 +301,7 @@ index abc123..def456 100644
   it('handles empty diff', () => {
     const diff = ''
 
-    const result = parseDiffOutput(diff, "/root/")
+    const result = parseDiffOutput(diff, '/root/')
 
     expect(result.size).toBe(0)
   })
@@ -320,7 +320,7 @@ index abc123..def456 100644
  line 3
  line 4`
 
-    const result = parseDiffOutput(diff, "/root/")
+    const result = parseDiffOutput(diff, '/root/')
 
     expect(result.size).toBe(1)
     expect(result.get('/root/new/path.ts')).toEqual(new Set([2]))

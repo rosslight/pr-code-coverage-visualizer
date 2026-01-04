@@ -1,11 +1,11 @@
 ## Repo Coverage
 ![Line Coverage](https://img.shields.io/badge/Line%20Coverage-0.00%25-red.svg?style=flat)
-![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n/a-brightgreen.svg?style=flat)
+![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n%2Fa-brightgreen.svg?style=flat)
 
 ---
 
 ## PR Coverage
-<b>0/1</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>n/a</b>)
+<b>0/3</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>n/a</b>)
 
 ### MultiFilePkg
 <details>

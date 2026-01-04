@@ -541,7 +541,7 @@ function generateCoverageBadges(packages: PackageCoverage[]): string {
   const badges: string[] = []
   badges.push(renderBadge('Line Coverage', metrics.lineMetrics))
   badges.push(renderBadge('Branch Coverage', metrics.branchMetrics ?? { covered: 0, total: 0 }))
-  return badges.join('\n')
+  return badges.join(' ')
 }
 
 /**

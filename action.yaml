@@ -31,6 +31,10 @@ outputs:
     description: The overall line coverage percentage
   branch-coverage:
     description: The overall branch coverage percentage
+  pr-line-coverage:
+    description: The coverage of the changes of this PR. Equal to the overall line coverage, if not executed on a PR
+  pr-branch-coverage:
+    description: The overall branch coverage percentage. Equal to the overall line coverage, if not executed on a PR
 
 runs:
   using: 'node24'

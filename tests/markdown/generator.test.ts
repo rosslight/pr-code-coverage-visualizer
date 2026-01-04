@@ -52,6 +52,7 @@ describe('generateMarkdown', () => {
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/example.ts', numberOfLines: 10 }]),
+      { lineCoverage: 42.24, branchCoverage: undefined },
       {},
       logger,
     )
@@ -98,6 +99,7 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/src/core/utils.cs', numberOfLines: 15 },
         { resolvedPath: '/repo/tests/test_utils.cs', numberOfLines: 10 },
       ]),
+      { lineCoverage: 42.24, branchCoverage: undefined },
       {},
       logger,
     )
@@ -132,6 +134,7 @@ describe('generateMarkdown', () => {
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/gaps.rs', numberOfLines: 50 }]),
+      { lineCoverage: 42.24, branchCoverage: undefined },
       {},
       logger,
     )
@@ -148,7 +151,13 @@ describe('generateMarkdown', () => {
       },
     ]
 
-    const markdown = generateMarkdown(packages, createFakeFileContents([]), {}, logger)
+    const markdown = generateMarkdown(
+      packages,
+      createFakeFileContents([]),
+      { lineCoverage: 42.24, branchCoverage: undefined },
+      {},
+      logger,
+    )
 
     await expect(markdown).toMatchFileSnapshot('./__snapshots__/empty-package.snap.md')
   })
@@ -188,6 +197,7 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/src/file1.py', numberOfLines: 3 },
         { resolvedPath: '/repo/src/file2.py', numberOfLines: 3 },
       ]),
+      { lineCoverage: 10, branchCoverage: 10 },
       {},
       logger,
     )
@@ -229,6 +239,7 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/test.rs', numberOfLines: 2 },
         { resolvedPath: '/repo/test.tsx', numberOfLines: 3 },
       ]),
+      { lineCoverage: 20, branchCoverage: 20 },
       {},
       logger,
     )
@@ -261,6 +272,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
+        { lineCoverage: 30, branchCoverage: 30 },
         {},
         logger,
       )
@@ -291,6 +303,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
+        { lineCoverage: 40, branchCoverage: 40 },
         {},
         logger,
       )
@@ -323,6 +336,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
+        { lineCoverage: 50, branchCoverage: 50 },
         {},
         logger,
       )
@@ -357,6 +371,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 15 }]),
+        { lineCoverage: 60, branchCoverage: 60 },
         {},
         logger,
       )
@@ -388,6 +403,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 6 }]),
+        { lineCoverage: 70, branchCoverage: 70 },
         {},
         logger,
       )
@@ -419,6 +435,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
+        { lineCoverage: 80, branchCoverage: 80 },
         {},
         logger,
       )
@@ -449,7 +466,7 @@ describe('generateMarkdown', () => {
       // Empty map - file not found on disk
       const fileContents = new Map<string, string[]>()
 
-      const markdown = generateMarkdown(packages, fileContents, {}, logger)
+      const markdown = generateMarkdown(packages, fileContents, { lineCoverage: 42.24, branchCoverage: 50 }, {}, logger)
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-not-found.snap.md')
     })
@@ -477,6 +494,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/short.ts', numberOfLines: 3 }]),
+        { lineCoverage: 90, branchCoverage: 90 },
         {},
         logger,
       )
@@ -505,6 +523,7 @@ describe('generateMarkdown', () => {
         generateMarkdown(
           packages,
           createFakeFileContents([{ resolvedPath: '/repo/a.ts', numberOfLines: 1 }]),
+          { lineCoverage: 100, branchCoverage: 100 },
           {
             maxCharacters: 100,
           },
@@ -531,6 +550,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/small.ts', numberOfLines: 2 }]),
+        { lineCoverage: 42.24, branchCoverage: 50 },
         {
           maxCharacters: 2000,
         },
@@ -575,6 +595,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/file2.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
         ]),
+        { lineCoverage: 42.24, branchCoverage: 50 },
         { maxCharacters: 1000 },
         logger,
       )
@@ -631,6 +652,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/pkg2/b.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/pkg3/c.ts', numberOfLines: 2 },
         ]),
+        { lineCoverage: 42.24, branchCoverage: 50 },
         { maxCharacters: 900 },
         logger,
       )
@@ -682,6 +704,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file4.ts', numberOfLines: 2 },
         ]),
+        { lineCoverage: 42.24, branchCoverage: 50 },
         { maxCharacters: 1000 },
         logger,
       )
@@ -713,6 +736,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/test.ts', numberOfLines: 2 }]),
+        { lineCoverage: 42.24, branchCoverage: 50 },
         {},
         logger,
       )

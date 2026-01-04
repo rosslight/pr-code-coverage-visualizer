@@ -39,11 +39,13 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
     return
   }
 
-  const { markdown, lineCoverage, branchCoverage } = result
+  const { markdown, lineCoverage, branchCoverage, lineCoveragePr, branchCoveragePr } = result
 
   // Set GitHub Actions outputs
   core.setOutput('line-coverage', lineCoverage.toFixed(2))
-  core.setOutput('branch-coverage', branchCoverage.toFixed(2))
+  core.setOutput('branch-coverage', branchCoverage?.toFixed(2))
+  core.setOutput('pr-line-coverage', lineCoveragePr.toFixed(2))
+  core.setOutput('pr-branch-coverage', branchCoveragePr?.toFixed(2))
 
   // Find the pull request (needed for posting)
   const pullNumber = await findPullRequestNumber(octokit, context)

@@ -1,4 +1,10 @@
-import type { CoverageMetrics, FileCoverage, LineCoverage, PackageCoverage } from '../coverage/model.js'
+import {
+  CoverageMetrics,
+  FileCoverage,
+  LineCoverage,
+  PackageCoverage,
+  PercentageCoverageMetrics,
+} from '../coverage/model.js'
 import type { Logger } from '../core/index.js'
 
 // =============================================================================
@@ -85,6 +91,7 @@ type FileCoverageClassification = {
  *
  * @param packages - Array of packages
  * @param fileContents - Map of resolved (absolute) path to array of line contents
+ * @param overallMetrics - The overall percentage metrics
  * @param options - Optional configuration for Markdown generation
  * @param logger - Optional logger for emitting log messages
  * @returns Markdown string representation
@@ -93,6 +100,7 @@ type FileCoverageClassification = {
 export function generateMarkdown(
   packages: PackageCoverage[],
   fileContents: Map<string, string[]>,
+  overallMetrics: PercentageCoverageMetrics,
   options: MarkdownOptions = {},
   logger: Logger,
 ): string {
@@ -105,7 +113,7 @@ export function generateMarkdown(
   }
 
   // Step 1: Generate fixed content (badges and legend)
-  const badges = generateCoverageBadges(packages)
+  const badges = generateCoverageBadges(overallMetrics)
   const legend = generateLegend()
 
   // Step 2: Build package section data
@@ -193,43 +201,6 @@ function calculatePRMetrics(packages: PackageCoverage[]): PRMetrics {
   const branchPercent = hasBranchData && branchTotal > 0 ? (branchCovered / branchTotal) * 100 : null
 
   return { coveredLines, totalLines, linePercent, branchPercent }
-}
-
-/**
- * Calculate aggregate metrics for the entire packages (for badges).
- */
-function calculateReportMetrics(packages: PackageCoverage[]): {
-  lineMetrics: CoverageMetrics
-  branchMetrics?: CoverageMetrics
-} {
-  let lineCovered = 0
-  let lineTotal = 0
-  let branchCovered = 0
-  let branchTotal = 0
-  let hasBranchData = false
-
-  for (const pkg of packages) {
-    for (const file of pkg.files) {
-      lineCovered += file.lineMetrics.covered
-      lineTotal += file.lineMetrics.total
-
-      if (file.branchMetrics) {
-        hasBranchData = true
-        branchCovered += file.branchMetrics.covered
-        branchTotal += file.branchMetrics.total
-      }
-    }
-  }
-
-  const result: { lineMetrics: CoverageMetrics; branchMetrics?: CoverageMetrics } = {
-    lineMetrics: { covered: lineCovered, total: lineTotal },
-  }
-
-  if (hasBranchData) {
-    result.branchMetrics = { covered: branchCovered, total: branchTotal }
-  }
-
-  return result
 }
 
 // =============================================================================
@@ -535,28 +506,25 @@ function generateLegend(): string {
 /**
  * Render coverage badges for the overall packages.
  */
-function generateCoverageBadges(packages: PackageCoverage[]): string {
-  const metrics = calculateReportMetrics(packages)
-
+function generateCoverageBadges(overallMetrics: PercentageCoverageMetrics): string {
   const badges: string[] = []
-  badges.push(renderBadge('Line Coverage', metrics.lineMetrics))
-  badges.push(renderBadge('Branch Coverage', metrics.branchMetrics ?? { covered: 0, total: 0 }))
+  badges.push(renderBadge('Line Coverage', overallMetrics.lineCoverage))
+  badges.push(renderBadge('Branch Coverage', overallMetrics.branchCoverage))
   return badges.join(' ')
 }
 
 /**
  * Render a single shields.io badge markdown.
  */
-function renderBadge(label: string, metrics?: CoverageMetrics): string {
+function renderBadge(label: string, percent: number | undefined): string {
   const encodedLabel = encodeURIComponent(label)
 
   let value: string
   let color: string
-  if (!metrics || metrics.total === 0) {
+  if (!percent) {
     value = 'n/a'
     color = 'brightgreen'
   } else {
-    const percent = (metrics.covered / metrics.total) * 100
     value = formatPercent(percent)
     color = getBadgeColor(percent)
   }

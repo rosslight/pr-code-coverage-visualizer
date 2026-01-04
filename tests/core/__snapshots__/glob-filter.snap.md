@@ -1,20 +1,19 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-50%25-yellowgreen.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-100%25-brightgreen.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-50%25-yellowgreen.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-75%25-green.svg?style=flat)
 
 ---
 
 ## PR Coverage
-<b>1/2</b> changed lines covered (Lines: <b>50%</b>, Branches: <b>100%</b>)
+<b>2/2</b> changed lines covered (Lines: <b>100%</b>, Branches: <b>50%</b>)
 
 ### filtered
 <details>
-<summary>🔴 <b>src/include/wanted.ts</b> — <b>1/2</b> changed lines covered (Lines: <b>50%</b>, Branches: <b>100%</b>)</summary>
+<summary>🟠 <b>src/include/wanted.ts</b> — <b>2/2</b> changed lines covered (Lines: <b>100%</b>, Branches: <b>50%</b>)</summary>
 
 ```typescript
-  1 🟩 export function wanted(): string {
-  2 🟥   return 'I am wanted'
-  3 ⬛ }
-  4 ⬛ 
+  1 🟨 export function wanted(): string {
+  2 🟩   return 'I am wanted'
+...
 ```
 </details>
 

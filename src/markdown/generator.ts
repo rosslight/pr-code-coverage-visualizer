@@ -370,11 +370,6 @@ class CharBudget {
     this.reservedTailLength = reservedTail.length
   }
 
-  /** Current total length including reserved tail. */
-  get totalLength(): number {
-    return this.currentLength + this.reservedTailLength
-  }
-
   /** Check if adding content would exceed the limit. */
   wouldExceed(content: string): boolean {
     return this.currentLength + content.length + this.reservedTailLength > this.maxCharacters

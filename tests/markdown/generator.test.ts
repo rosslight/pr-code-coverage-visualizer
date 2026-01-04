@@ -745,4 +745,340 @@ describe('generateMarkdown', () => {
       expect(markdown.length).toBeLessThan(65536)
     })
   })
+
+  describe('ordering', () => {
+    describe('package ordering', () => {
+      it('sorts packages by uncovered lines (descending)', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'LowUncovered',
+            files: [
+              {
+                filename: 'low.ts',
+                resolvedPath: '/repo/low.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+          {
+            name: 'HighUncovered',
+            files: [
+              {
+                filename: 'high.ts',
+                resolvedPath: '/repo/high.ts',
+                lines: [
+                  { lineNumber: 1, state: 'not-covered' },
+                  { lineNumber: 2, state: 'not-covered' },
+                  { lineNumber: 3, state: 'not-covered' },
+                ],
+                lineMetrics: { covered: 0, total: 3 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/low.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/high.ts', numberOfLines: 4 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/package-ordering-uncovered-lines.snap.md')
+      })
+
+      it('sorts packages by partial branches when uncovered lines are equal', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'LowPartial',
+            files: [
+              {
+                filename: 'low.ts',
+                resolvedPath: '/repo/low.ts',
+                lines: [{ lineNumber: 1, state: 'partial' }],
+                lineMetrics: { covered: 0, total: 1 },
+                branchMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+          {
+            name: 'HighPartial',
+            files: [
+              {
+                filename: 'high.ts',
+                resolvedPath: '/repo/high.ts',
+                lines: [
+                  { lineNumber: 1, state: 'partial' },
+                  { lineNumber: 2, state: 'partial' },
+                ],
+                lineMetrics: { covered: 0, total: 2 },
+                branchMetrics: { covered: 0, total: 2 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/low.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/high.ts', numberOfLines: 3 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/package-ordering-partial-branches.snap.md')
+      })
+
+      it('sorts packages alphabetically when uncovered lines and partial branches are equal', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'ZebraPackage',
+            files: [
+              {
+                filename: 'zebra.ts',
+                resolvedPath: '/repo/zebra.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+          {
+            name: 'AlphaPackage',
+            files: [
+              {
+                filename: 'alpha.ts',
+                resolvedPath: '/repo/alpha.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/package-ordering-alphabetical.snap.md')
+      })
+    })
+
+    describe('file ordering', () => {
+      it('sorts fully covered files before files with uncovered lines', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'uncovered.ts',
+                resolvedPath: '/repo/uncovered.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'covered.ts',
+                resolvedPath: '/repo/covered.ts',
+                lines: [{ lineNumber: 1, state: 'covered' }],
+                lineMetrics: { covered: 1, total: 1 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/uncovered.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/covered.ts', numberOfLines: 2 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-ordering-fully-covered-first.snap.md')
+      })
+
+      it('sorts files by uncovered lines (descending) when not fully covered', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'low-uncovered.ts',
+                resolvedPath: '/repo/low-uncovered.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'high-uncovered.ts',
+                resolvedPath: '/repo/high-uncovered.ts',
+                lines: [
+                  { lineNumber: 1, state: 'not-covered' },
+                  { lineNumber: 2, state: 'not-covered' },
+                  { lineNumber: 3, state: 'not-covered' },
+                ],
+                lineMetrics: { covered: 0, total: 3 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/low-uncovered.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/high-uncovered.ts', numberOfLines: 4 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-ordering-uncovered-lines.snap.md')
+      })
+
+      it('sorts files by partial branches when uncovered lines are equal', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'low-partial.ts',
+                resolvedPath: '/repo/low-partial.ts',
+                lines: [{ lineNumber: 1, state: 'partial' }],
+                lineMetrics: { covered: 0, total: 1 },
+                branchMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'high-partial.ts',
+                resolvedPath: '/repo/high-partial.ts',
+                lines: [
+                  { lineNumber: 1, state: 'partial' },
+                  { lineNumber: 2, state: 'partial' },
+                ],
+                lineMetrics: { covered: 0, total: 2 },
+                branchMetrics: { covered: 0, total: 2 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/low-partial.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/high-partial.ts', numberOfLines: 3 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-ordering-partial-branches.snap.md')
+      })
+
+      it('sorts files alphabetically when uncovered lines and partial branches are equal', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'zebra.ts',
+                resolvedPath: '/repo/zebra.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'alpha.ts',
+                resolvedPath: '/repo/alpha.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-ordering-alphabetical.snap.md')
+      })
+
+      it('sorts files correctly with mixed coverage states', async () => {
+        const packages: PackageCoverage[] = [
+          {
+            name: 'TestPackage',
+            files: [
+              {
+                filename: 'zebra.ts',
+                resolvedPath: '/repo/zebra.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+              {
+                filename: 'covered.ts',
+                resolvedPath: '/repo/covered.ts',
+                lines: [{ lineNumber: 1, state: 'covered' }],
+                lineMetrics: { covered: 1, total: 1 },
+              },
+              {
+                filename: 'high-uncovered.ts',
+                resolvedPath: '/repo/high-uncovered.ts',
+                lines: [
+                  { lineNumber: 1, state: 'not-covered' },
+                  { lineNumber: 2, state: 'not-covered' },
+                ],
+                lineMetrics: { covered: 0, total: 2 },
+              },
+              {
+                filename: 'alpha.ts',
+                resolvedPath: '/repo/alpha.ts',
+                lines: [{ lineNumber: 1, state: 'not-covered' }],
+                lineMetrics: { covered: 0, total: 1 },
+              },
+            ],
+          },
+        ]
+
+        const markdown = generateMarkdown(
+          packages,
+          createFakeFileContents([
+            { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/covered.ts', numberOfLines: 2 },
+            { resolvedPath: '/repo/high-uncovered.ts', numberOfLines: 3 },
+            { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
+          ]),
+          { lineCoverage: 50, branchCoverage: 50 },
+          {},
+          logger,
+        )
+
+        await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-ordering-mixed-coverage.snap.md')
+      })
+    })
+  })
 })

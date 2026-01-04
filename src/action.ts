@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 import type { Octokit } from '@octokit/action'
-import { processCoverage, type Logger } from './core/index.js'
-import { findPullRequestNumber, getComparisonShas, postComment, type Context } from './github.js'
+import { type Logger, processCoverage } from './core/index.js'
+import { type Context, findPullRequestNumber, getComparisonShas, postComment } from './github.js'
 
 export type Inputs = {
   files: string

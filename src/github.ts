@@ -51,7 +51,7 @@ export async function findPullRequestNumber(octokit: Octokit, context: Context):
   }
 
   // Otherwise, find PRs associated with this commit
-  let pulls
+  let pulls: { number: number; state?: string }[]
   try {
     const res = await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
       owner: context.repo.owner,

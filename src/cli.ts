@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import * as fs from 'node:fs/promises'
 import { execFile } from 'node:child_process'
+import * as fs from 'node:fs/promises'
 import { parseArgs, promisify } from 'node:util'
 import { processCoverage } from './core/index.js'
-import { isValidGitRef } from './filter/changed-lines.js'
 import { createCliLogger } from './core/process-coverage.js'
+import { isValidGitRef } from './filter/changed-lines.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
     await fs.writeFile(values.output, markdown, 'utf-8')
     console.log(`\nReport written to: ${values.output}`)
   } else {
-    console.log('\n' + markdown)
+    console.log(`\n${markdown}`)
   }
 
   // Print metrics summary

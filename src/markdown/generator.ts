@@ -1,11 +1,11 @@
-import {
+import type { Logger } from '../core/index.js'
+import type {
   CoverageMetrics,
   FileCoverage,
   LineCoverage,
   PackageCoverage,
   PercentageCoverageMetrics,
 } from '../coverage/model.js'
-import type { Logger } from '../core/index.js'
 
 // =============================================================================
 // CONSTANTS
@@ -222,7 +222,7 @@ function formatRatio(covered: number, total: number): string {
 function formatPercent(value: number): string {
   const formatted = value.toFixed(2)
   // Remove trailing zeros and decimal point if not needed
-  return formatted.replace(/\.?0+$/, '') + '%'
+  return `${formatted.replace(/\.?0+$/, '')}%`
 }
 
 /**
@@ -392,11 +392,10 @@ function buildMarkdownWithinLimitFileLevel(
   logger: Logger,
 ): string {
   // Legend with separator is always appended at the end
-  const legendWithSeparator = '\n---\n\n' + legend
+  const legendWithSeparator = `\n---\n\n${legend}`
 
   // Build the fixed header
-  const header =
-    '## Repo Coverage\n' + badges + '\n' + '\n---\n\n' + '## PR Coverage\n' + renderPRSummaryLine(prMetrics) + '\n\n'
+  const header = `## Repo Coverage\n${badges}\n\n---\n\n## PR Coverage\n${renderPRSummaryLine(prMetrics)}\n\n`
 
   // Check if even the header + legend exceeds the limit
   if (header.length + legendWithSeparator.length > maxCharacters) {
@@ -416,7 +415,7 @@ function buildMarkdownWithinLimitFileLevel(
     const pkg = packageSections[p]!
 
     // Try to include package header
-    if (!budget.tryAppend(pkg.header + '\n')) {
+    if (!budget.tryAppend(`${pkg.header}\n`)) {
       // Can't fit this package header - omit this and all remaining packages
       omittedPackages += packageSections.length - p
       for (let i = p; i < packageSections.length; i++) {
@@ -428,7 +427,7 @@ function buildMarkdownWithinLimitFileLevel(
 
     // Process files in this package
     for (let f = 0; f < pkg.files.length; f++) {
-      const fileContent = pkg.files[f]!.content
+      const fileContent = pkg.files[f]?.content
       const isLastFileOverall = f === pkg.files.length - 1 && p === packageSections.length - 1
       const spacing = isLastFileOverall ? '\n' : '\n\n'
 
@@ -448,7 +447,7 @@ function buildMarkdownWithinLimitFileLevel(
   // Add truncation notice if needed and it fits
   if (truncated && (omittedFiles > 0 || omittedPackages > 0)) {
     const notice = renderTruncationNotice(omittedFiles, omittedPackages)
-    budget.tryAppend(notice + '\n')
+    budget.tryAppend(`${notice}\n`)
 
     if (omittedFiles > 0) {
       logger.warning(
@@ -574,7 +573,7 @@ function renderFileSection(
   lines.push('')
 
   const extension = getFileExtension(file.filename)
-  lines.push('```' + extension)
+  lines.push(`\`\`\`${extension}`)
   lines.push(renderAnnotatedLines(file.lines, fileLines, numberOfSurroundingLines))
   lines.push('```')
   lines.push('</details>')

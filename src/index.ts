@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
-import { getContext, getOctokit } from './github.js'
 import { run } from './action.js'
+import { getContext, getOctokit } from './github.js'
 
 try {
   await run(

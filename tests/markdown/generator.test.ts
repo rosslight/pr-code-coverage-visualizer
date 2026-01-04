@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { createCliLogger } from '../../src/core/process-coverage.js'
 import type { PackageCoverage } from '../../src/coverage/model.js'
 import { generateMarkdown, MINIMUM_CHARACTERS } from '../../src/markdown/index.js'
-import { createCliLogger } from '../../src/core/process-coverage.js'
 
 type FakeFileInfo = {
   resolvedPath: string

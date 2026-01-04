@@ -1,6 +1,6 @@
 import * as path from 'node:path'
-import { FileCoverage, PackageCoverage } from '../coverage/model.js'
 import type { Logger } from '../core/index.js'
+import type { FileCoverage, PackageCoverage } from '../coverage/model.js'
 import type { ChangedLinesMap } from './model.js'
 
 /**

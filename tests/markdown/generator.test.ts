@@ -879,7 +879,7 @@ describe('generateMarkdown', () => {
     })
 
     describe('file ordering', () => {
-      it('sorts fully covered files before files with uncovered lines', async () => {
+      it('sorts files by uncovered lines with fully covered files appearing last', async () => {
         const packages: PackageCoverage[] = [
           {
             name: 'TestPackage',

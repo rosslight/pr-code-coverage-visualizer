@@ -125,7 +125,7 @@ export function generateMarkdown(
   // Step 4: Calculate PR metrics
   const prMetrics = calculatePRMetrics(packages)
 
-  // Step 5: Render markdown with truncation
+  // Step 5: Render Markdown with truncation
   if (packageSections.length === 0) {
     const markdown = buildMarkdownForNoUncoveredContent(badges, prMetrics)
     logger.info(`Generated Markdown with ${markdown.length} characters`)
@@ -281,7 +281,7 @@ function buildPackageSectionData(
   if (pkg.files.length === 0) {
     return null
   }
-  const header = `### ${pkg.name}`
+  const header = `\n### ${pkg.name}`
   const files: FileSectionData[] = []
   let totalUncoveredLines = 0
   let totalPartialBranches = 0
@@ -395,7 +395,7 @@ function buildMarkdownWithinLimitFileLevel(
   const legendWithSeparator = `\n---\n\n${legend}`
 
   // Build the fixed header
-  const header = `## Repo Coverage\n${badges}\n\n---\n\n## PR Coverage\n${renderPRSummaryLine(prMetrics)}\n\n`
+  const header = `## Repo Coverage\n${badges}\n\n---\n\n## PR Coverage\n${renderPRSummaryLine(prMetrics)}\n`
 
   // Check if even the header + legend exceeds the limit
   if (header.length + legendWithSeparator.length > maxCharacters) {
@@ -428,8 +428,7 @@ function buildMarkdownWithinLimitFileLevel(
     // Process files in this package
     for (let f = 0; f < pkg.files.length; f++) {
       const fileContent = pkg.files[f]?.content
-      const isLastFileOverall = f === pkg.files.length - 1 && p === packageSections.length - 1
-      const spacing = isLastFileOverall ? '\n' : '\n\n'
+      const spacing = '\n'
 
       if (!budget.tryAppend(fileContent + spacing)) {
         // Can't fit this file - omit remaining files in this package and all remaining packages
@@ -761,18 +760,11 @@ function sortPackages(packages: PackageSectionData[]): void {
 }
 
 /**
- * Sort files by uncovered lines, partial branches, then alphabetically.
- * Fully covered files (0 uncovered) come first, then files with uncovered lines.
+ * Sort files by uncovered lines (descending), partial branches (descending), then alphabetically.
  */
 function sortFiles(files: FileSectionData[]): void {
   files.sort((a, b) => {
-    const aIsFullyCovered = a.uncoveredLines === 0
-    const bIsFullyCovered = b.uncoveredLines === 0
-    if (aIsFullyCovered !== bIsFullyCovered) {
-      return aIsFullyCovered ? -1 : 1
-    }
-
-    if (!aIsFullyCovered && a.uncoveredLines !== b.uncoveredLines) {
+    if (a.uncoveredLines !== b.uncoveredLines) {
       return b.uncoveredLines - a.uncoveredLines
     }
 

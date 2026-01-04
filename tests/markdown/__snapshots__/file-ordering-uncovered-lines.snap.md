@@ -17,7 +17,6 @@
   4 ⬛ some content in line 4
 ```
 </details>
-
 <details>
 <summary>🔴 <b>low-uncovered.ts</b> — <b>0/1</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>n/a</b>)</summary>
 

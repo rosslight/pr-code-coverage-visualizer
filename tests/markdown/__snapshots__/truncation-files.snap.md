@@ -15,7 +15,6 @@
   2 ⬛ some content in line 2
 ```
 </details>
-
 <details>
 <summary>🔴 <b>file2.ts</b> — <b>0/1</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>n/a</b>)</summary>
 
@@ -24,7 +23,6 @@
   2 ⬛ some content in line 2
 ```
 </details>
-
 ... (1 file(s) not shown due to size limit)
 
 ---

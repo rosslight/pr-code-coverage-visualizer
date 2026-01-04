@@ -16,7 +16,6 @@
   3 ⬛ some content in line 3
 ```
 </details>
-
 <details>
 <summary>🟠 <b>low-partial.ts</b> — <b>0/1</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>0%</b>)</summary>
 

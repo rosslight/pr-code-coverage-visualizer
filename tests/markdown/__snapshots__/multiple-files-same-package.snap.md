@@ -7,8 +7,6 @@
 <b>3/5</b> changed lines covered (Lines: <b>60%</b>, Branches: <b>0%</b>)
 
 ### MultiFilePackage
-✓ 🟢 <b>src/file1.py</b> — <b>2/2</b> changed lines covered
-
 <details>
 <summary>🔴 <b>src/file2.py</b> — <b>1/3</b> changed lines covered (Lines: <b>33.33%</b>, Branches: <b>0%</b>)</summary>
 
@@ -18,6 +16,7 @@
   3 🟨 some content in line 3
 ```
 </details>
+✓ 🟢 <b>src/file1.py</b> — <b>2/2</b> changed lines covered
 
 ---
 

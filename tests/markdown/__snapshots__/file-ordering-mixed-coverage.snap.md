@@ -7,8 +7,6 @@
 <b>1/5</b> changed lines covered (Lines: <b>20%</b>, Branches: <b>n/a</b>)
 
 ### TestPackage
-✓ 🟢 <b>covered.ts</b> — <b>1/1</b> changed lines covered
-
 <details>
 <summary>🔴 <b>high-uncovered.ts</b> — <b>0/2</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>n/a</b>)</summary>
 
@@ -18,7 +16,6 @@
   3 ⬛ some content in line 3
 ```
 </details>
-
 <details>
 <summary>🔴 <b>alpha.ts</b> — <b>0/1</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>n/a</b>)</summary>
 
@@ -27,7 +24,6 @@
   2 ⬛ some content in line 2
 ```
 </details>
-
 <details>
 <summary>🔴 <b>zebra.ts</b> — <b>0/1</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>n/a</b>)</summary>
 
@@ -36,6 +32,7 @@
   2 ⬛ some content in line 2
 ```
 </details>
+✓ 🟢 <b>covered.ts</b> — <b>1/1</b> changed lines covered
 
 ---
 

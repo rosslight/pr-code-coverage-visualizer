@@ -11,6 +11,7 @@ import {
 } from '../coverage/index.js'
 import { filterByChangedLines, filterByGlob, getChangedLinesFromGit, type ChangedLinesMap } from '../filter/index.js'
 import { generateMarkdown } from '../markdown/index.js'
+import { PercentageCoverageMetrics } from '../coverage/model.js'
 
 /**
  * Logger interface for dependency injection.
@@ -53,7 +54,6 @@ export type ProcessCoverageInputs = {
   /** Explicit head commit SHA for comparison */
   headSha?: string | undefined
 }
-
 /**
  * Result of coverage processing.
  */
@@ -61,7 +61,9 @@ export type ProcessCoverageResult = {
   /** Generated markdown report */
   markdown: string
   lineCoverage: number
-  branchCoverage: number
+  branchCoverage: number | undefined
+  lineCoveragePr: number
+  branchCoveragePr: number | undefined
 }
 
 /**
@@ -151,13 +153,26 @@ export async function processCoverage(
       logger.debug?.(`Generating markdown for ${file.resolvedPath} with ${file.lines.length} changed lines`)
     }
   }
+
+  const overallMetrics = calculateOverallMetrics(mergedPackages)
+  const prMetrics = calculateOverallMetrics(filteredPackages)
+  logger.info(
+    `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
+  )
+  logger.info(
+    `Calculated overall metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`,
+  )
+
   // Generate Markdown from filtered report
-  const markdown = generateMarkdown(filteredPackages, fileContents, {}, logger)
+  const markdown = generateMarkdown(filteredPackages, fileContents, overallMetrics, {}, logger)
 
-  // Calculate overall metrics for outputs (from original merged report for accuracy)
-  const metrics = calculateOverallMetrics(mergedPackages)
-
-  return { markdown, lineCoverage: metrics.lineCoverage, branchCoverage: metrics.branchCoverage }
+  return {
+    markdown,
+    lineCoverage: overallMetrics.lineCoverage,
+    branchCoverage: overallMetrics.branchCoverage,
+    lineCoveragePr: prMetrics.lineCoverage,
+    branchCoveragePr: prMetrics.branchCoverage,
+  }
 }
 
 async function firstExistingDirectory(paths: readonly string[]): Promise<string | undefined> {
@@ -272,7 +287,7 @@ async function mergeReportAndResolveSources(
 /**
  * Calculate overall coverage metrics from a merged packages.
  */
-function calculateOverallMetrics(packages: PackageCoverage[]): { lineCoverage: number; branchCoverage: number } {
+function calculateOverallMetrics(packages: PackageCoverage[]): PercentageCoverageMetrics {
   let lineCovered = 0
   let lineTotal = 0
   let branchCovered = 0

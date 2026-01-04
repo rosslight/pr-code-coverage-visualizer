@@ -14,6 +14,11 @@ export type CoverageMetrics = {
   total: number
 }
 
+export type PercentageCoverageMetrics = {
+  lineCoverage: number
+  branchCoverage?: number | undefined
+}
+
 export type FileCoverage = {
   /** Display path (relative to source root, for markdown output) */
   filename: string

@@ -1,6 +1,6 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-60.00%25-green.svg?style=flat)
-![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-0.00%25-red.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-60%25-green.svg?style=flat)
+![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-0%25-red.svg?style=flat)
 
 ---
 
@@ -11,7 +11,7 @@
 ✓ 🟢 <b>src/file1.py</b> — <b>2/2</b> changed lines covered
 
 <details>
-<summary>🔴 <b>src/file2.py</b> — <b>1/3</b> changed lines covered (Lines: <b>33%</b>, Branches: <b>0%</b>)</summary>
+<summary>🔴 <b>src/file2.py</b> — <b>1/3</b> changed lines covered (Lines: <b>33.33%</b>, Branches: <b>0%</b>)</summary>
 
 ```python
   1 🟥 some content in line 1

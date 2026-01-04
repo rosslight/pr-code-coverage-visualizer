@@ -37,7 +37,7 @@ export const MINIMUM_CHARACTERS = 900
 export type MarkdownOptions = {
   /** Number of lines to show before and after uncovered lines (default: 1) */
   numberOfSurroundingLines?: number
-  /** Maximum number of characters in the output (default: 65536, minimum: 500) */
+  /** Maximum number of characters in the output (default: 65536, minimum: 900) */
   maxCharacters?: number
 }
 
@@ -244,11 +244,23 @@ function formatRatio(covered: number, total: number): string {
 }
 
 /**
- * Format a percentage rounded to nearest integer.
+ * Format a percentage value (0-100) to up to 2 decimal places.
+ * Removes trailing zeros for cleaner output.
+ * Examples: 100 → "100%", 99.99 → "99.99%", 20.5 → "20.5%"
  */
-function formatPercentRounded(covered: number, total: number): string {
+function formatPercent(value: number): string {
+  const formatted = value.toFixed(2)
+  // Remove trailing zeros and decimal point if not needed
+  return formatted.replace(/\.?0+$/, '') + '%'
+}
+
+/**
+ * Calculate and format percentage from covered/total ratio.
+ * Returns "0%" if total is 0.
+ */
+function formatPercentFromRatio(covered: number, total: number): string {
   if (total === 0) return '0%'
-  return `${Math.round((covered / total) * 100)}%`
+  return formatPercent((covered / total) * 100)
 }
 
 /**
@@ -258,7 +270,7 @@ function formatBranchPercentOrNA(branchMetrics: CoverageMetrics | undefined): st
   if (!branchMetrics || branchMetrics.total === 0) {
     return 'n/a'
   }
-  return `${Math.round((branchMetrics.covered / branchMetrics.total) * 100)}%`
+  return formatPercentFromRatio(branchMetrics.covered, branchMetrics.total)
 }
 
 // =============================================================================
@@ -493,8 +505,8 @@ function renderPRSummaryLine(metrics: PRMetrics): string {
     return '<b>0/0</b> changed lines covered'
   }
 
-  const linePercentStr = formatPercentRounded(metrics.coveredLines, metrics.totalLines)
-  const branchPercentStr = metrics.branchPercent !== null ? `${Math.round(metrics.branchPercent)}%` : 'n/a'
+  const linePercentStr = formatPercentFromRatio(metrics.coveredLines, metrics.totalLines)
+  const branchPercentStr = metrics.branchPercent !== null ? formatPercent(metrics.branchPercent) : 'n/a'
 
   return `<b>${formatRatio(metrics.coveredLines, metrics.totalLines)}</b> changed lines covered (Lines: <b>${linePercentStr}</b>, Branches: <b>${branchPercentStr}</b>)`
 }
@@ -545,7 +557,7 @@ function renderBadge(label: string, metrics?: CoverageMetrics): string {
     color = 'brightgreen'
   } else {
     const percent = (metrics.covered / metrics.total) * 100
-    value = `${percent.toFixed(2)}%`
+    value = formatPercent(percent)
     color = getBadgeColor(percent)
   }
   const encodedValue = encodeURIComponent(value)
@@ -584,7 +596,7 @@ function renderFileSection(
   // Has uncovered/partial lines - use details block
   const lines: string[] = []
 
-  const linePercent = formatPercentRounded(file.lineMetrics.covered, file.lineMetrics.total)
+  const linePercent = formatPercentFromRatio(file.lineMetrics.covered, file.lineMetrics.total)
   const branchPercent = formatBranchPercentOrNA(file.branchMetrics)
 
   lines.push(`<details>`)

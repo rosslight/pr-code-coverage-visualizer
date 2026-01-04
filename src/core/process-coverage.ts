@@ -160,7 +160,7 @@ export async function processCoverage(
     `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
   )
   logger.info(
-    `Calculated overall metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`,
+    `Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`,
   )
 
   // Generate Markdown from filtered report

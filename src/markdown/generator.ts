@@ -520,7 +520,7 @@ function renderBadge(label: string, percent: number | undefined): string {
 
   let value: string
   let color: string
-  if (!percent) {
+  if (percent === undefined) {
     value = 'n/a'
     color = 'brightgreen'
   } else {

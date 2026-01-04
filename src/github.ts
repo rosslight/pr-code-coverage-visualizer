@@ -38,12 +38,18 @@ const getEnv = (name: string): string => {
 
 /**
  * Find the pull request number associated with the current context.
+ * Only returns PRs that are still open (not merged or closed).
  */
 export async function findPullRequestNumber(octokit: Octokit, context: Context): Promise<number | null> {
   // Check if we're already in a pull_request event
   if ('pull_request' in context.payload) {
-    const prPayload = context.payload as { pull_request?: { number: number } }
+    const prPayload = context.payload as { pull_request?: { number: number; state?: string } }
     if (prPayload.pull_request?.number) {
+      // For pull_request events, check if the PR is still open
+      // If it's closed/merged, we shouldn't update comments
+      if (prPayload.pull_request.state !== 'open') {
+        return null
+      }
       return prPayload.pull_request.number
     }
   }
@@ -55,7 +61,21 @@ export async function findPullRequestNumber(octokit: Octokit, context: Context):
     commit_sha: context.sha,
   })
 
-  return pulls[0]?.number ?? null
+  // Filter to only open PRs and return the first one
+  // If state is not available in the response, fetch PR details to check
+  for (const pull of pulls) {
+    const prNumber = pull.number
+    if (!prNumber) continue
+    if ('state' in pull) {
+      // Skip closed/merged PRs immediately
+      if (pull.state !== 'open') {
+        continue
+      }
+      return prNumber
+    }
+  }
+
+  return null
 }
 
 /**

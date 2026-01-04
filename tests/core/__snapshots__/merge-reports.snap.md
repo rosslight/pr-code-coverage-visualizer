@@ -1,15 +1,15 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-66.67%25-green.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-60.00%25-green.svg?style=flat)
 ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-100.00%25-brightgreen.svg?style=flat)
 
 ---
 
 ## PR Coverage
-<b>4/5</b> changed lines covered (Lines: <b>80%</b>, Branches: <b>100%</b>)
+<b>3/5</b> changed lines covered (Lines: <b>60%</b>, Branches: <b>100%</b>)
 
 ### shared
 <details>
-<summary>🔴 <b>src/shared.ts</b> — <b>4/5</b> changed lines covered (Lines: <b>80%</b>, Branches: <b>100%</b>)</summary>
+<summary>🔴 <b>src/shared.ts</b> — <b>3/5</b> changed lines covered (Lines: <b>60%</b>, Branches: <b>100%</b>)</summary>
 
 ```typescript
   1 🟩 export function sharedOne(): number {

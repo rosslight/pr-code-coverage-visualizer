@@ -8,7 +8,6 @@
 <b>3/5</b> changed lines covered (Lines: <b>60%</b>, Branches: <b>0%</b>)
 
 ### MultiFilePackage
-
 ✓ 🟢 <b>src/file1.py</b> — <b>2/2</b> changed lines covered
 
 <details>

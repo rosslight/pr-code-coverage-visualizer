@@ -41,38 +41,44 @@ const getEnv = (name: string): string => {
  * Only returns PRs that are still open (not merged or closed).
  */
 export async function findPullRequestNumber(octokit: Octokit, context: Context): Promise<number | null> {
-  // Check if we're already in a pull_request event
+  // Fast path: pull_request event payload
   if ('pull_request' in context.payload) {
-    const prPayload = context.payload as { pull_request?: { number: number; state?: string } }
-    if (prPayload.pull_request?.number) {
-      // For pull_request events, check if the PR is still open
-      // If it's closed/merged, we shouldn't update comments
-      if (prPayload.pull_request.state !== 'open') {
-        return null
-      }
-      return prPayload.pull_request.number
+    const pr = (context.payload as { pull_request?: { number: number; state?: string } }).pull_request
+    if (pr?.number) {
+      if (pr.state !== 'open') return null
+      return pr.number
     }
   }
 
   // Otherwise, find PRs associated with this commit
-  const { data: pulls } = await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    commit_sha: context.sha,
-  })
+  let pulls
+  try {
+    const res = await octokit.rest.repos.listPullRequestsAssociatedWithCommit({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      commit_sha: context.sha,
+    })
+    pulls = res.data
+  } catch {
+    return null
+  }
 
-  // Filter to only open PRs and return the first one
-  // If state is not available in the response, fetch PR details to check
   for (const pull of pulls) {
     const prNumber = pull.number
     if (!prNumber) continue
-    if ('state' in pull) {
-      // Skip closed/merged PRs immediately
-      if (pull.state !== 'open') {
-        continue
-      }
-      return prNumber
-    }
+
+    // Prefer using state if present
+    if (pull.state === 'open') return prNumber
+    if (pull.state && pull.state !== 'open') continue
+
+    // Fallback: fetch PR details if state is missing/unknown
+    const { data: pr } = await octokit.rest.pulls.get({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      pull_number: prNumber,
+    })
+
+    if (pr.state === 'open') return prNumber
   }
 
   return null

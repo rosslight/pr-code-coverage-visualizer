@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0](https://github.com/rosslight/pr-code-coverage-visualizer/compare/v2.0.0...v2.1.0) (2026-01-06)
+
+
+### Features
+
+* Filter glob before changed files to calculate percentages correctly ([3bdf96f](https://github.com/rosslight/pr-code-coverage-visualizer/commit/3bdf96fd4b00d0a5478339dc713e161323477a79))
+
+
+### Bug Fixes
+
+* Add a linebreak for fully covered lines ([5e28190](https://github.com/rosslight/pr-code-coverage-visualizer/commit/5e281906948d0e40efe0598ddae88ed18744e153))
+* Branch coverage calculation ([#11](https://github.com/rosslight/pr-code-coverage-visualizer/issues/11)) ([a7e62f9](https://github.com/rosslight/pr-code-coverage-visualizer/commit/a7e62f95c8efc83915004a86730787ada44d4170))
+
 ## [2.0.0](https://github.com/rosslight/pr-code-coverage-visualizer/compare/v1.1.0...v2.0.0) (2026-01-04)
 
 

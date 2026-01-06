@@ -3,7 +3,7 @@
   <packages>
     <package name="lines.test" line-rate="0.6" branch-rate="0.5" complexity="1">
       <classes>
-        <class name="LinesClass" filename="src/lines.ts" line-rate="0.6" branch-rate="0.5" complexity="1">
+        <class name="LinesClass" filename="src/lines.ts" line-rate="0.6" branch-rate="1.0" complexity="1">
           <lines>
             <line number="1" hits="10" branch="False" />
             <line number="2" hits="5" branch="False" />

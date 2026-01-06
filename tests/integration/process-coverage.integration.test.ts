@@ -50,9 +50,9 @@ describe('processCoverage integration', () => {
     )
 
     expect(result).not.toBeNull()
-    // Outputs must be computed from the already-filtered data (same as markdown)
-    expect(result?.lineCoverage).toBeCloseTo(0.5, 5)
-    expect(result?.branchCoverage).toBeCloseTo(0.833333, 5)
+    // Outputs must be computed are calculated both from after he glob was applied
+    expect(result?.lineCoverage).toBeCloseTo(1, 5)
+    expect(result?.branchCoverage).toBeCloseTo(0.75, 5)
     expect(result?.lineCoveragePr).toBeCloseTo(1, 5)
     expect(result?.branchCoveragePr).toBeCloseTo(0.75, 5)
     expect(result?.markdown).toContain('wanted.ts')

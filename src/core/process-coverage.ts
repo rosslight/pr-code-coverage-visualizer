@@ -135,23 +135,20 @@ export async function processCoverage(
   }
 
   // Apply filters to the coverage report
-  let filteredPackages: PackageCoverage[] = mergedPackages
-  if (changedLinesPerFileMap) {
-    filteredPackages = filterByChangedLines(filteredPackages, changedLinesPerFileMap, logger)
-  }
-  filteredPackages = filterByGlob(filteredPackages, inputs.globPattern, logger)
+  const globFilteredPackages: PackageCoverage[] = filterByGlob(mergedPackages, inputs.globPattern, logger)
+  const fileFilteredPackages = changedLinesPerFileMap ?filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger) : globFilteredPackages
 
   // Read file contents from disk using resolved paths
-  const fileContents = await readFileContents(filteredPackages)
+  const fileContents = await readFileContents(fileFilteredPackages)
 
-  for (const filteredPackage of filteredPackages) {
+  for (const filteredPackage of fileFilteredPackages) {
     for (const file of filteredPackage.files) {
       logger.debug?.(`Generating markdown for ${file.resolvedPath} with ${file.lines.length} changed lines`)
     }
   }
 
-  const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(mergedPackages)
-  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(filteredPackages)
+  const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages)
+  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(fileFilteredPackages)
   logger.info(
     `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
   )
@@ -160,7 +157,7 @@ export async function processCoverage(
   )
 
   // Generate Markdown from filtered report
-  const markdown = generateMarkdown(filteredPackages, fileContents, overallMetrics, {}, logger)
+  const markdown = generateMarkdown(fileFilteredPackages, fileContents, overallMetrics, {}, logger)
 
   return {
     markdown,

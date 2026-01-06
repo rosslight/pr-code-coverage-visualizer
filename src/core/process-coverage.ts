@@ -225,9 +225,9 @@ async function mergeReportAndResolveSources(
         const existing = fileMap.get(resolvedPath)
         if (existing) {
           const merged = CoberturaCoverageParser.merge(existing, file.lines)
-          assert(existing.resolvedPath)
+          assert(merged.resolvedPath === resolvedPath)
           fileMap.set(resolvedPath, merged)
-          logger.debug?.(`Merged duplicate file: ${file.filename}`)
+          logger.debug?.(`Merged duplicate file: ${merged.resolvedPath}`)
         } else {
           file.resolvedPath = resolvedPath
           fileMap.set(resolvedPath, file)

@@ -44,7 +44,7 @@ describe('processCoverage integration', () => {
       {
         filePatterns: [path.join(testDir, 'coverage.xml')],
         sourceDir: testDir,
-        excludePatterns: ['exclude/**'],
+        excludePatterns: ['**/exclude/**'],
       },
       createCliLogger(true),
     )

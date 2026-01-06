@@ -115,7 +115,7 @@ describe('generateMarkdown', () => {
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([
-        { resolvedPath: '/repo/src/integration/utils.cs', numberOfLines: 15 },
+        { resolvedPath: '/repo/src/core/utils.cs', numberOfLines: 15 },
         { resolvedPath: '/repo/tests/test_utils.cs', numberOfLines: 10 },
       ]),
       CoberturaCoverageParser.calculatePackageCoverage(packages),

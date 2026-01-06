@@ -210,6 +210,20 @@ describe('CoberturaCoverageParser', () => {
       // 4 lines with hits (covered or partial), 1 not covered
       expect(file.coverage).toEqual({ linesCovered: 4, totalLines: 5, branchesCovered: 3, totalBranches: 6, lineCoverage: 0.8, branchCoverage: 3 / 6 })
     })
+
+    it('ignores branch data if invalid syntax was provided', async () => {
+      const content = await loadResource('branch-invalid-syntax.xml')
+      const report = await parser.parse(content, undefined)
+
+      const file = report.packages[0]!.files[0]!
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }) // No branch
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[3]).toEqual<LineCoverage>({ lineNumber: 4, covered: true, branchesCovered: 0, totalBranches: 0 })
+
+      // All lines covered
+      expect(file.coverage).toEqual({ linesCovered: 4, totalLines: 4, branchesCovered: 0, totalBranches: 0, lineCoverage: 1, branchCoverage: undefined })
+    })
   })
 
   describe('class merging', () => {

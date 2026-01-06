@@ -35,17 +35,18 @@ jobs:
             coverage/coverage2.xml
           update-comment: true
           show-changed-lines-only: true
-          show-glob-only: '**/**'
+          exclude-files: |
+            some_generated_files/*.rs
 ```
 
 ### Inputs
 
-| Name                      | Default    | Description                                                     |
-|---------------------------|------------|-----------------------------------------------------------------|
-| `files`                   | (required) | One or multiple files. Can be multiple lines. Glob is supported |
-| `update-comment`          | true       | TODO: Update                                                    |
-| `show-changed-lines-only` | true       | If part of a PR, filter coverage data against changed lines     |
-| `show-glob-only`          | '**'    | Select subdirectories to show coverage data for                 |
+| Name                      | Default    | Description                                                                                |
+|---------------------------|------------|--------------------------------------------------------------------------------------------|
+| `files`                   | (required) | One or multiple files. Can be multiple lines. Glob is supported                            |
+| `update-comment`          | true       | TODO: Update                                                                               |
+| `show-changed-lines-only` | true       | If part of a PR, filter coverage data against changed lines                                |
+| `exclude-files`           | ''         | Glob patterns for files to exclude. Can be multiple lines. If empty, no files are excluded |
 
 ### Outputs
 

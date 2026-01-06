@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import {
@@ -40,16 +41,17 @@ export function createCliLogger(verbose: boolean): Logger {
  */
 export type ProcessCoverageInputs = {
   /** Coverage file patterns (newline or comma separated) */
-  files: string
+  filePatterns: string[]
   /** Source directory for resolving file paths from coverage files */
   sourceDir: string
-  /** Glob pattern to filter which files to show */
-  globPattern: string
+  /** Glob patterns for files to exclude. If empty, no files are excluded. */
+  excludePatterns: string[]
   /** Explicit base commit SHA for comparison */
   baseSha?: string | undefined
   /** Explicit head commit SHA for comparison */
   headSha?: string | undefined
 }
+
 /**
  * Result of coverage processing.
  */
@@ -74,16 +76,10 @@ export async function processCoverage(
   inputs: ProcessCoverageInputs,
   logger: Logger,
 ): Promise<ProcessCoverageResult | null> {
-  // Find all matching coverage files
-  const filePatterns = inputs.files
-    .split(/[\n,]/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-
-  logger.info(`Looking for coverage files matching: [${filePatterns.join(', ')}]`)
+  logger.info(`Looking for coverage files matching: [${inputs.filePatterns.join(', ')}]`)
 
   // Sort and de-duplicate matched files for deterministic CI output
-  const globResults = await Array.fromAsync(fs.glob(filePatterns))
+  const globResults = await Array.fromAsync(fs.glob(inputs.filePatterns))
   const matchedFiles = [...new Set(globResults.map((f) => path.resolve(f)).sort())]
 
   if (matchedFiles.length === 0) {
@@ -135,8 +131,10 @@ export async function processCoverage(
   }
 
   // Apply filters to the coverage report
-  const globFilteredPackages: PackageCoverage[] = filterByGlob(mergedPackages, inputs.globPattern, logger)
-  const fileFilteredPackages = changedLinesPerFileMap ?filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger) : globFilteredPackages
+  const globFilteredPackages: PackageCoverage[] = filterByGlob(mergedPackages, inputs.excludePatterns, logger)
+  const fileFilteredPackages = changedLinesPerFileMap
+    ? filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger)
+    : globFilteredPackages
 
   // Read file contents from disk using resolved paths
   const fileContents = await readFileContents(fileFilteredPackages)
@@ -217,21 +215,23 @@ async function mergeReportAndResolveSources(
         const existing = fileMap.get(resolvedPath)
         if (existing) {
           const merged = CoberturaCoverageParser.merge(existing, file.lines)
+          assert(existing.resolvedPath)
           fileMap.set(resolvedPath, merged)
           logger.debug?.(`Merged duplicate file: ${file.filename}`)
         } else {
-          fileMap.set(resolvedPath, { resolvedPath, ...file })
+          file.resolvedPath = resolvedPath
+          fileMap.set(resolvedPath, file)
         }
       }
     }
   }
 
   // Convert file maps back to arrays for the final report
-  const packages: PackageCoverage[] = Array.from(packageMap.values()).map(({ name, fileMap }) => {
+  const packages: PackageCoverage[] = Array.from(packageMap.values()).map(({ name, fileMap }): PackageCoverage => {
     const files = Array.from(fileMap.values())
     return {
       name,
-      files,
+      files: files,
       coverage: CoberturaCoverageParser.calculateFileCoverage(files),
     }
   })

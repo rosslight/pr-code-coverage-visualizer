@@ -7,7 +7,7 @@ export type Inputs = {
   files: string
   updateComment: boolean
   showChangedLinesOnly: boolean
-  globPattern: string
+  excludeFilesPattern: string
   sourceDir: string
 }
 
@@ -23,12 +23,22 @@ const actionLogger: Logger = {
 export const run = async (inputs: Inputs, octokit: Octokit, context: Context): Promise<void> => {
   const shas = getComparisonShas(context)
 
+  const excludePatterns = inputs.excludeFilesPattern
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  const filePatterns = inputs.files
+    .split(/[\n,]/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
   // Process coverage using the core module
   const result = await processCoverage(
     {
-      files: inputs.files,
+      filePatterns,
       sourceDir: inputs.sourceDir,
-      globPattern: inputs.globPattern,
+      excludePatterns,
       baseSha: shas?.baseSha,
       headSha: shas?.headSha,
     },

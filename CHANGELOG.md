@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/rosslight/pr-code-coverage-visualizer/compare/v2.1.0...v2.2.0) (2026-01-06)
+
+
+### Features
+
+* Rework glob functionality to work by excluding specific things ([#12](https://github.com/rosslight/pr-code-coverage-visualizer/issues/12)) ([464ad7a](https://github.com/rosslight/pr-code-coverage-visualizer/commit/464ad7a76294e40d51290e1d9303176e275e8ab7))
+
 ## [2.1.0](https://github.com/rosslight/pr-code-coverage-visualizer/compare/v2.0.0...v2.1.0) (2026-01-06)
 
 

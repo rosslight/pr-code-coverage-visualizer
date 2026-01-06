@@ -60890,6 +60890,9 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // EXTERNAL MODULE: ./node_modules/.pnpm/@actions+core@2.0.1/node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(1635);
+// EXTERNAL MODULE: external "node:assert"
+var external_node_assert_ = __nccwpck_require__(4589);
+var external_node_assert_default = /*#__PURE__*/__nccwpck_require__.n(external_node_assert_);
 // EXTERNAL MODULE: external "node:fs/promises"
 var promises_ = __nccwpck_require__(1455);
 // EXTERNAL MODULE: external "node:path"
@@ -62846,9 +62849,6 @@ const XMLValidator = {
   validate: validate
 }
 
-// EXTERNAL MODULE: external "node:assert"
-var external_node_assert_ = __nccwpck_require__(4589);
-var external_node_assert_default = /*#__PURE__*/__nccwpck_require__.n(external_node_assert_);
 ;// CONCATENATED MODULE: ./src/coverage/parsers/cobertura.ts
 
 
@@ -62918,6 +62918,7 @@ class CoberturaCoverageParser {
                 const coverage = CoberturaCoverageParser.calculateCoverage(lines);
                 newFile = {
                     filename,
+                    resolvedPath: undefined,
                     lines,
                     coverage
                 };
@@ -62933,6 +62934,7 @@ class CoberturaCoverageParser {
         return {
             lines,
             filename: file.filename,
+            resolvedPath: file.resolvedPath,
             coverage
         };
     }
@@ -63205,17 +63207,33 @@ function parsePatchForChangedLines(patch) {
 
 
 /**
- * Filter coverage packages to only include files matching a glob pattern.
+ * Filter coverage packages to exclude files matching any of the provided glob patterns.
+ * If patterns array is empty, no files are excluded (all files are included).
  */
-function filterByGlob(packages, pattern, logger) {
-    const effectivePattern = pattern.includes('/') ? pattern : `**/${pattern}`;
+function filterByGlob(packages, patterns, logger) {
+    if (patterns.length === 0) {
+        return packages;
+    }
+    // Normalize patterns: if pattern doesn't contain '/', prepend '**/'
+    const effectivePatterns = patterns.map((pattern) => (pattern.includes('/') ? pattern : `**/${pattern}`));
     const totalFilesBefore = packages.reduce((sum, pkg) => sum + pkg.files.length, 0);
     const filteredPackages = packages
         .map((pkg) => {
         const files = pkg.files.filter((file) => {
-            const filePath = file.resolvedPath ?? file.filename;
-            logger.debug?.(`Filtering '${filePath}' against glob '${effectivePattern}'`);
-            return external_node_path_.matchesGlob(filePath, effectivePattern);
+            const filePath = file.resolvedPath;
+            // Files without resolvedPath are included (not excluded)
+            if (!filePath) {
+                return true;
+            }
+            // Exclude file if it matches ANY of the patterns
+            const shouldExclude = effectivePatterns.some((pattern) => {
+                const matches = external_node_path_.matchesGlob(filePath, pattern);
+                if (matches) {
+                    logger.debug?.(`Excluding '${filePath}' (matches exclude-pattern '${pattern}')`);
+                }
+                return matches;
+            });
+            return !shouldExclude;
         });
         return {
             name: pkg.name,
@@ -63225,7 +63243,7 @@ function filterByGlob(packages, pattern, logger) {
     })
         .filter((pkg) => pkg.files.length > 0);
     const totalFilesAfter = filteredPackages.reduce((sum, pkg) => sum + pkg.files.length, 0);
-    logger.info(`Filtered ${totalFilesAfter}/${totalFilesBefore} files against glob '${effectivePattern}'`);
+    logger.info(`Filtered ${totalFilesAfter}/${totalFilesBefore} files against exclude-patterns: [${effectivePatterns.join(', ')}]`);
     return filteredPackages;
 }
 /**
@@ -63842,6 +63860,7 @@ function sortFiles(files) {
 
 
 
+
 /**
  * Create a logger implementation for CLI that uses console.
  * @param verbose - Whether to enable debug logging
@@ -63865,14 +63884,9 @@ function createCliLogger(verbose) {
  * @returns Processing result with markdown and metrics
  */
 async function processCoverage(inputs, logger) {
-    // Find all matching coverage files
-    const filePatterns = inputs.files
-        .split(/[\n,]/)
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-    logger.info(`Looking for coverage files matching: [${filePatterns.join(', ')}]`);
+    logger.info(`Looking for coverage files matching: [${inputs.filePatterns.join(', ')}]`);
     // Sort and de-duplicate matched files for deterministic CI output
-    const globResults = await Array.fromAsync(promises_.glob(filePatterns));
+    const globResults = await Array.fromAsync(promises_.glob(inputs.filePatterns));
     const matchedFiles = [...new Set(globResults.map((f) => external_node_path_.resolve(f)).sort())];
     if (matchedFiles.length === 0) {
         logger.warning('No coverage files found matching the specified patterns');
@@ -63916,8 +63930,10 @@ async function processCoverage(inputs, logger) {
         }
     }
     // Apply filters to the coverage report
-    const globFilteredPackages = filterByGlob(mergedPackages, inputs.globPattern, logger);
-    const fileFilteredPackages = changedLinesPerFileMap ? filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger) : globFilteredPackages;
+    const globFilteredPackages = filterByGlob(mergedPackages, inputs.excludePatterns, logger);
+    const fileFilteredPackages = changedLinesPerFileMap
+        ? filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger)
+        : globFilteredPackages;
     // Read file contents from disk using resolved paths
     const fileContents = await readFileContents(fileFilteredPackages);
     for (const filteredPackage of fileFilteredPackages) {
@@ -63930,7 +63946,7 @@ async function processCoverage(inputs, logger) {
     logger.info(`Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`);
     logger.info(`Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`);
     // Generate Markdown from filtered report
-    const markdown = generateMarkdown(fileFilteredPackages, fileContents, overallMetrics, {}, logger);
+    const markdown = generateMarkdown(fileFilteredPackages, fileContents, overallMetrics, { maxCharacters: inputs.maxCharacters, numberOfSurroundingLines: inputs.numberOfSurroundingLines }, logger);
     return {
         markdown,
         lineCoverage: overallMetrics.lineCoverage,
@@ -63982,11 +63998,13 @@ async function mergeReportAndResolveSources(reports, fallbackSource, logger) {
                 const existing = fileMap.get(resolvedPath);
                 if (existing) {
                     const merged = CoberturaCoverageParser.merge(existing, file.lines);
+                    external_node_assert_default()(merged.resolvedPath === resolvedPath);
                     fileMap.set(resolvedPath, merged);
-                    logger.debug?.(`Merged duplicate file: ${file.filename}`);
+                    logger.debug?.(`Merged duplicate file: ${merged.resolvedPath}`);
                 }
                 else {
-                    fileMap.set(resolvedPath, { resolvedPath, ...file });
+                    file.resolvedPath = resolvedPath;
+                    fileMap.set(resolvedPath, file);
                 }
             }
         }
@@ -63996,7 +64014,7 @@ async function mergeReportAndResolveSources(reports, fallbackSource, logger) {
         const files = Array.from(fileMap.values());
         return {
             name,
-            files,
+            files: files,
             coverage: CoberturaCoverageParser.calculateFileCoverage(files),
         };
     });
@@ -64049,11 +64067,19 @@ const actionLogger = {
 };
 const run = async (inputs, octokit, context) => {
     const shas = (0,github/* getComparisonShas */.br)(context);
+    const excludePatterns = inputs.excludeFilesPattern
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    const filePatterns = inputs.files
+        .split(/[\n,]/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
     // Process coverage using the core module
     const result = await processCoverage({
-        files: inputs.files,
+        filePatterns,
         sourceDir: inputs.sourceDir,
-        globPattern: inputs.globPattern,
+        excludePatterns,
         baseSha: shas?.baseSha,
         headSha: shas?.headSha,
     }, actionLogger);
@@ -68324,19 +68350,19 @@ async function postComment(octokit, context, pullNumber, markdown, updateExistin
 __nccwpck_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1635);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(_actions_core__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _action_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(641);
-/* harmony import */ var _github_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(5238);
+/* harmony import */ var _github_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(5238);
+/* harmony import */ var _action_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(641);
 
 
 
 try {
-    await (0,_action_js__WEBPACK_IMPORTED_MODULE_1__/* .run */ .e)({
+    await (0,_action_js__WEBPACK_IMPORTED_MODULE_2__/* .run */ .e)({
         files: _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('files', { required: true }),
         updateComment: _actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput('update-comment'),
         showChangedLinesOnly: _actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput('show-changed-lines-only'),
-        globPattern: _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('show-glob-only') || '**',
+        excludeFilesPattern: _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('exclude-files') || '',
         sourceDir: _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput('source') || process.env['GITHUB_WORKSPACE'] || process.cwd(),
-    }, (0,_github_js__WEBPACK_IMPORTED_MODULE_2__/* .getOctokit */ .QB)(), await (0,_github_js__WEBPACK_IMPORTED_MODULE_2__/* .getContext */ .SD)());
+    }, (0,_github_js__WEBPACK_IMPORTED_MODULE_1__/* .getOctokit */ .QB)(), await (0,_github_js__WEBPACK_IMPORTED_MODULE_1__/* .getContext */ .SD)());
 }
 catch (e) {
     _actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(e instanceof Error ? e : String(e));

@@ -37,9 +37,9 @@ export const MINIMUM_CHARACTERS = 900
 /** Options for markdown generation */
 export type MarkdownOptions = {
   /** Number of lines to show before and after uncovered lines (default: 1) */
-  numberOfSurroundingLines?: number
+  numberOfSurroundingLines?: number | undefined
   /** Maximum number of characters in the output (default: 65536, minimum: 900) */
-  maxCharacters?: number
+  maxCharacters?: number | undefined
 }
 
 /** Data structure for a package section with its files */

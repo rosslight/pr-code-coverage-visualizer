@@ -13,10 +13,10 @@ inputs:
     description: If part of a PR, filter coverage data against changed lines
     required: false
     default: 'true'
-  show-glob-only:
-    description: Select subdirectories to show coverage data for
+  exclude-files:
+    description: Glob patterns for files to exclude from coverage data. Can be multiple lines. If empty, no files are excluded.
     required: false
-    default: '**'
+    default: ''
   source:
     description: Fallback source directory for resolving file paths from coverage files
     required: false

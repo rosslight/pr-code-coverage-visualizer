@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
-import { run } from './action.js'
 import { getContext, getOctokit } from './github.js'
+import { run } from './action.js'
 
 try {
   await run(
@@ -8,7 +8,7 @@ try {
       files: core.getInput('files', { required: true }),
       updateComment: core.getBooleanInput('update-comment'),
       showChangedLinesOnly: core.getBooleanInput('show-changed-lines-only'),
-      globPattern: core.getInput('show-glob-only') || '**',
+      excludeFilesPattern: core.getInput('exclude-files') || '',
       sourceDir: core.getInput('source') || process.env['GITHUB_WORKSPACE'] || process.cwd(),
     },
     getOctokit(),

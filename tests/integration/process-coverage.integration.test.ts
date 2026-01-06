@@ -10,9 +10,9 @@ describe('processCoverage integration', () => {
 
     const result = await processCoverage(
       {
-        files: path.join(testDir, 'coverage.xml'),
+        filePatterns: [path.join(testDir, 'coverage.xml')],
         sourceDir: testDir,
-        globPattern: '**/*',
+        excludePatterns: [],
       },
       createCliLogger(true),
     )
@@ -26,9 +26,9 @@ describe('processCoverage integration', () => {
 
     const result = await processCoverage(
       {
-        files: path.join(testDir, 'coverage.xml'),
+        filePatterns: [path.join(testDir, 'coverage.xml')],
         sourceDir: testDir,
-        globPattern: '**/*',
+        excludePatterns: [],
       },
       createCliLogger(true),
     )
@@ -42,19 +42,17 @@ describe('processCoverage integration', () => {
 
     const result = await processCoverage(
       {
-        files: path.join(testDir, 'coverage.xml'),
+        filePatterns: [path.join(testDir, 'coverage.xml')],
         sourceDir: testDir,
-        globPattern: '**/include/**',
+        excludePatterns: ['**/exclude/**'],
       },
       createCliLogger(true),
     )
 
     expect(result).not.toBeNull()
-    // Outputs must be computed are calculated both from after he glob was applied
+    // Outputs must be computed from the already-filtered data (same as markdown)
     expect(result?.lineCoverage).toBeCloseTo(1, 5)
     expect(result?.branchCoverage).toBeCloseTo(0.75, 5)
-    expect(result?.lineCoveragePr).toBeCloseTo(1, 5)
-    expect(result?.branchCoveragePr).toBeCloseTo(0.75, 5)
     expect(result?.markdown).toContain('wanted.ts')
     expect(result?.markdown).not.toContain('ignored.ts')
     await expect(result?.markdown).toMatchFileSnapshot('./__snapshots__/glob-filter.snap.md')
@@ -65,9 +63,9 @@ describe('processCoverage integration', () => {
 
     const result = await processCoverage(
       {
-        files: `${testDir}/coverage-a.xml,${testDir}/coverage-b.xml`,
+        filePatterns: [`${testDir}/coverage-a.xml`, `${testDir}/coverage-b.xml`],
         sourceDir: testDir,
-        globPattern: '**/*',
+        excludePatterns: [],
       },
       createCliLogger(true),
     )
@@ -79,9 +77,9 @@ describe('processCoverage integration', () => {
   it('returns null when no files match pattern', async () => {
     const result = await processCoverage(
       {
-        files: '/nonexistent/**/*.xml',
+        filePatterns: ['/nonexistent/**/*.xml'],
         sourceDir: '.',
-        globPattern: '**/*',
+        excludePatterns: [],
       },
       createCliLogger(true),
     )

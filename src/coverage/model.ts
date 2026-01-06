@@ -28,7 +28,7 @@ export type FileCoverage = {
   /** Display path (relative to source root, for markdown output) */
   readonly filename: string
   /** Absolute path for reading file contents (set after path resolution) */
-  resolvedPath?: string | undefined
+  resolvedPath: string | undefined
   /** Coverage information per line */
   readonly lines: LineCoverage[]
   /** The coverage information */

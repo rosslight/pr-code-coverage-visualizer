@@ -19,12 +19,12 @@ USAGE:
   coverage-visualizer --files <patterns> [options]
 
 OPTIONS:
-  --files <patterns>       Coverage file patterns (required, comma or newline separated)
+  --file <pattern>       Coverage file patterns (required)
   --output <path>          Output file path (optional, prints to stdout if not specified)
   --source <path>          Source directory for resolving file paths (default: current directory)
   --base-ref <ref>         Git ref to compare against (e.g., origin/main, HEAD~1)
   --show-changed-only      Filter to show only changed lines (requires --base-ref)
-  --show-glob <pattern>    Glob pattern to filter which files to show (default: **)
+  --exclude-file <pattern> Glob pattern for files to exclude (can be passed multiple times)
   --verbose, -v            Enable debug logging
   --help                   Show this help message
 
@@ -38,20 +38,20 @@ EXAMPLES:
   # Show only changed lines compared to main branch
   coverage-visualizer --files "coverage/*.xml" --base-ref origin/main --show-changed-only
 
-  # Filter to specific directory
-  coverage-visualizer --files "coverage/*.xml" --show-glob "src/components/**"
+  # Exclude specific files or directories
+  coverage-visualizer --files "coverage/*.xml" --exclude-files "to_exclude/*" --exclude-files "my_folder/*.generated"
 `)
 }
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {
-      files: { type: 'string', short: 'f' },
+      file: { type: 'string', short: 'f' },
       output: { type: 'string', short: 'o' },
       source: { type: 'string', short: 's' },
       'base-ref': { type: 'string', short: 'b' },
       'show-changed-only': { type: 'boolean', default: false },
-      'show-glob': { type: 'string', default: '**' },
+      'exclude-files': { type: 'string', multiple: true },
       verbose: { type: 'boolean', short: 'v', default: false },
       help: { type: 'boolean', short: 'h', default: false },
     },
@@ -67,8 +67,8 @@ async function main(): Promise<void> {
   }
 
   // Validate required arguments
-  if (!values.files) {
-    console.error('Error: --files is required\n')
+  if (!values.file) {
+    console.error('Error: --file is required\n')
     printHelp()
     process.exit(1)
   }
@@ -106,13 +106,15 @@ async function main(): Promise<void> {
   }
 
   // Process coverage
+  const excludePatterns = (values['exclude-files'] as string[] | undefined) ?? []
   const result = await processCoverage(
     {
-      files: values.files,
+      filePatterns: [values.file],
       sourceDir: values.source ?? process.cwd(),
-      globPattern: values['show-glob'] ?? '**',
+      excludePatterns,
       baseSha,
       headSha,
+      maxCharacters: 1_000_000
     },
     cliLogger,
   )

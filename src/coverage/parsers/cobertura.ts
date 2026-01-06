@@ -133,6 +133,7 @@ export class CoberturaCoverageParser implements CoverageParser {
         const coverage = CoberturaCoverageParser.calculateCoverage(lines)
         newFile = {
           filename,
+          resolvedPath: undefined,
           lines,
           coverage
         }
@@ -150,6 +151,7 @@ export class CoberturaCoverageParser implements CoverageParser {
     return {
       lines,
       filename: file.filename,
+      resolvedPath: file.resolvedPath,
       coverage
     }
   }

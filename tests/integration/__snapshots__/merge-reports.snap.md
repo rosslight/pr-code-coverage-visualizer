@@ -12,8 +12,10 @@
 
 ```typescript
 ...
-  4 🟩 
-  5 🟥 
+  4 🟩 export function sharedTwo(): number {
+  5 🟥   return 2
+  6 ⬛ }
+  7 ⬛ 
 ```
 </details>
 

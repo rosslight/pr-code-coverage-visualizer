@@ -60879,7 +60879,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 6003:
+/***/ 641:
 /***/ ((__unused_webpack_module, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -62846,7 +62846,11 @@ const XMLValidator = {
   validate: validate
 }
 
+// EXTERNAL MODULE: external "node:assert"
+var external_node_assert_ = __nccwpck_require__(4589);
+var external_node_assert_default = /*#__PURE__*/__nccwpck_require__.n(external_node_assert_);
 ;// CONCATENATED MODULE: ./src/coverage/parsers/cobertura.ts
+
 
 /**
  * Parser for Cobertura XML coverage format.
@@ -62869,14 +62873,11 @@ class CoberturaCoverageParser {
         const coverage = parsed.coverage;
         const packages = this.parsePackages(coverage.packages?.package);
         const sources = this.parseSources(coverage.sources?.source);
-        const report = { packages };
-        if (sources.length > 0) {
-            report.sources = sources;
-        }
-        if (filePath !== undefined) {
-            report.hintName = filePath;
-        }
-        return report;
+        return {
+            sources: sources.length > 0 ? sources : undefined,
+            hintName: filePath,
+            packages
+        };
     }
     parseSources(sources) {
         if (!sources)
@@ -62889,10 +62890,14 @@ class CoberturaCoverageParser {
         if (!packages)
             return [];
         const packageList = Array.isArray(packages) ? packages : [packages];
-        return packageList.map((pkg) => ({
-            name: pkg['@_name'],
-            files: this.parseClasses(pkg.classes?.class),
-        }));
+        return packageList.map((pkg) => {
+            const files = this.parseClasses(pkg.classes?.class);
+            return {
+                name: pkg['@_name'],
+                files: files,
+                coverage: CoberturaCoverageParser.calculateFileCoverage(files)
+            };
+        });
     }
     parseClasses(classes) {
         if (!classes)
@@ -62903,28 +62908,33 @@ class CoberturaCoverageParser {
         for (const cls of classList) {
             const filename = cls['@_filename'];
             const lines = this.parseLines(cls.lines?.line);
-            if (fileMap.has(filename)) {
+            const existing = fileMap.get(filename);
+            let newFile;
+            if (existing) {
                 // Merge lines from multiple classes in the same file
-                const existing = fileMap.get(filename);
-                existing.lines = this.mergeLines(existing.lines, lines);
-                existing.lineMetrics = this.calculateLineMetrics(existing.lines);
-                const mergedBranch = this.mergeBranchMetrics(existing.branchMetrics, this.calculateBranchMetrics(lines));
-                if (mergedBranch) {
-                    existing.branchMetrics = mergedBranch;
-                }
+                newFile = CoberturaCoverageParser.merge(existing, lines);
             }
             else {
-                const branchMetrics = this.calculateBranchMetrics(lines);
-                const fileCoverage = {
+                const coverage = CoberturaCoverageParser.calculateCoverage(lines);
+                newFile = {
                     filename,
                     lines,
-                    lineMetrics: this.calculateLineMetrics(lines),
-                    branchMetrics: branchMetrics
+                    coverage
                 };
-                fileMap.set(filename, fileCoverage);
             }
+            fileMap.set(filename, newFile);
         }
         return Array.from(fileMap.values());
+    }
+    static merge(file, additionalLines) {
+        // Merge lines from multiple classes in the same file
+        const lines = CoberturaCoverageParser.mergeLines(file.lines, additionalLines);
+        const coverage = CoberturaCoverageParser.calculateCoverage(lines);
+        return {
+            lines,
+            filename: file.filename,
+            coverage
+        };
     }
     parseLines(lines) {
         if (!lines)
@@ -62932,87 +62942,79 @@ class CoberturaCoverageParser {
         const lineList = Array.isArray(lines) ? lines : [lines];
         return lineList.map((line) => ({
             lineNumber: Number.parseInt(line['@_number'], 10),
-            state: this.determineLineState(line),
+            ...this.determineLineState(line),
         }));
     }
     determineLineState(line) {
         const hits = Number.parseInt(line['@_hits'], 10);
-        if (hits === 0) {
-            return 'not-covered';
-        }
-        // Check if this line has branch coverage
-        if (line['@_branch'] === 'True' || line['@_branch'] === 'true') {
-            const conditionCoverage = line['@_condition-coverage'];
-            if (conditionCoverage) {
-                // Parse condition coverage like "50% (1/2)" or "100% (2/2)"
-                const match = conditionCoverage.match(/(\d+)%/);
-                if (match && match[1]) {
-                    const percentage = Number.parseInt(match[1], 10);
-                    if (percentage < 100) {
-                        return 'partial';
-                    }
-                }
+        let branchesCovered = 0;
+        let totalBranches = 0;
+        const hasBranch = line['@_branch'].toLowerCase() === 'true';
+        const conditionCoverage = line['@_condition-coverage'];
+        if (hasBranch && conditionCoverage) {
+            // Parse condition coverage like "50% (1/2)" or "100% (2/2)"
+            const match = conditionCoverage.match("\\\((\\d+)\/(\\d+)\\\)");
+            if (match && match[1] && match[2]) {
+                branchesCovered = Number.parseInt(match[1], 10);
+                totalBranches = Number.parseInt(match[2], 10);
             }
         }
-        return 'covered';
+        return { covered: hits > 0, branchesCovered, totalBranches };
     }
-    mergeLines(existing, newLines) {
+    static mergeLines(existing, newLines) {
         const lineMap = new Map();
         for (const line of existing) {
             lineMap.set(line.lineNumber, line);
         }
         for (const line of newLines) {
             const existingLine = lineMap.get(line.lineNumber);
+            let newLine;
             if (existingLine) {
-                // Merge: prefer covered > partial > not-covered
-                existingLine.state = this.mergeLineState(existingLine.state, line.state);
+                external_node_assert_default()(existingLine.totalBranches == line.totalBranches, "The number of total branches should be the same, always");
+                newLine = {
+                    lineNumber: existingLine.lineNumber,
+                    covered: existingLine.covered || line.covered,
+                    branchesCovered: Math.max(existingLine.branchesCovered, line.branchesCovered),
+                    totalBranches: Math.max(existingLine.totalBranches, line.totalBranches)
+                };
             }
             else {
-                lineMap.set(line.lineNumber, line);
+                newLine = line;
             }
+            external_node_assert_default()(newLine.totalBranches === 0 || newLine.totalBranches > 1, "Total Branches should be 0, or at least 2");
+            lineMap.set(line.lineNumber, newLine);
         }
         return Array.from(lineMap.values()).sort((a, b) => a.lineNumber - b.lineNumber);
     }
-    mergeLineState(a, b) {
-        const priority = {
-            covered: 2,
-            partial: 1,
-            'not-covered': 0,
-        };
-        return priority[a] >= priority[b] ? a : b;
-    }
-    calculateLineMetrics(lines) {
-        const total = lines.length;
-        const covered = lines.filter((l) => l.state === 'covered' || l.state === 'partial').length;
-        return { covered, total };
-    }
-    calculateBranchMetrics(lines) {
-        const branchLines = lines.filter((l) => l.state === 'partial' || l.state === 'covered');
-        const partialLines = lines.filter((l) => l.state === 'partial');
-        // Only return branch metrics if there are branch-related lines
-        if (partialLines.length === 0 && branchLines.length === 0) {
-            return undefined;
-        }
-        // This is a simplified calculation - actual branch coverage would need
-        // to track individual branches, but for now we track lines with branches
+    static calculateCoverage(lines) {
+        const linesCovered = lines.filter((l) => l.covered).length;
+        const totalLines = lines.length;
+        const branchesCovered = lines.reduce((sum, l) => sum + l.branchesCovered, 0);
+        const totalBranches = lines.reduce((sum, l) => sum + l.totalBranches, 0);
         return {
-            covered: branchLines.length - partialLines.length,
-            total: branchLines.length,
+            linesCovered,
+            totalLines,
+            branchesCovered,
+            totalBranches,
+            lineCoverage: totalLines > 0 ? linesCovered / totalLines : 0,
+            branchCoverage: totalBranches > 0 ? branchesCovered / totalBranches : undefined
         };
     }
-    mergeBranchMetrics(a, b) {
-        if (!a && !b)
-            return undefined;
-        if (!a)
-            return b;
-        if (!b)
-            return a;
-        return {
-            covered: a.covered + b.covered,
-            total: a.total + b.total,
-        };
+    static calculateFileCoverage(files) {
+        const lines = files.flatMap(x => x.lines);
+        return CoberturaCoverageParser.calculateCoverage(lines);
+    }
+    static calculatePackageCoverage(packages) {
+        const lines = packages.flatMap(x => x.files.flatMap(xx => xx.lines));
+        return CoberturaCoverageParser.calculateCoverage(lines);
     }
 }
+
+;// CONCATENATED MODULE: ./src/coverage/parsers/index.ts
+
+
+;// CONCATENATED MODULE: ./src/coverage/index.ts
+
 
 ;// CONCATENATED MODULE: external "node:child_process"
 const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
@@ -63201,6 +63203,7 @@ function parsePatchForChangedLines(patch) {
 
 ;// CONCATENATED MODULE: ./src/filter/filter.ts
 
+
 /**
  * Filter coverage packages to only include files matching a glob pattern.
  */
@@ -63208,14 +63211,18 @@ function filterByGlob(packages, pattern, logger) {
     const effectivePattern = pattern.includes('/') ? pattern : `**/${pattern}`;
     const totalFilesBefore = packages.reduce((sum, pkg) => sum + pkg.files.length, 0);
     const filteredPackages = packages
-        .map((pkg) => ({
-        name: pkg.name,
-        files: pkg.files.filter((file) => {
+        .map((pkg) => {
+        const files = pkg.files.filter((file) => {
             const filePath = file.resolvedPath ?? file.filename;
             logger.debug?.(`Filtering '${filePath}' against glob '${effectivePattern}'`);
             return external_node_path_.matchesGlob(filePath, effectivePattern);
-        }),
-    }))
+        });
+        return {
+            name: pkg.name,
+            files: files,
+            coverage: CoberturaCoverageParser.calculateFileCoverage(files),
+        };
+    })
         .filter((pkg) => pkg.files.length > 0);
     const totalFilesAfter = filteredPackages.reduce((sum, pkg) => sum + pkg.files.length, 0);
     logger.info(`Filtered ${totalFilesAfter}/${totalFilesBefore} files against glob '${effectivePattern}'`);
@@ -63230,9 +63237,8 @@ function filterByChangedLines(packages, changedLines, logger) {
     logger.debug?.(`Filtering against changed files ${JSON.stringify(changedFilePaths)}`);
     const totalFilesBefore = packages.reduce((sum, pkg) => sum + pkg.files.length, 0);
     const filteredPackages = packages
-        .map((pkg) => ({
-        name: pkg.name,
-        files: pkg.files
+        .map((pkg) => {
+        const files = pkg.files
             .map((file) => {
             // If no resolvedPath, include file without filtering
             if (!file.resolvedPath) {
@@ -63240,8 +63246,13 @@ function filterByChangedLines(packages, changedLines, logger) {
             }
             return filterFileLines(file, changedLines.get(file.resolvedPath));
         })
-            .filter((file) => file.lines.length > 0),
-    }))
+            .filter((file) => file.lines.length > 0);
+        return {
+            name: pkg.name,
+            files: files,
+            coverage: CoberturaCoverageParser.calculateFileCoverage(files),
+        };
+    })
         .filter((pkg) => pkg.files.length > 0);
     const totalFilesAfter = filteredPackages.reduce((sum, pkg) => sum + pkg.files.length, 0);
     logger.info(`Filtered ${totalFilesAfter}/${totalFilesBefore} files against changed files`);
@@ -63252,14 +63263,13 @@ function filterByChangedLines(packages, changedLines, logger) {
  */
 function filterFileLines(file, changedLineNumbers) {
     if (!changedLineNumbers || changedLineNumbers.size === 0) {
-        return { ...file, lines: [], lineMetrics: { covered: 0, total: 0 } };
+        return { ...file, lines: [], coverage: CoberturaCoverageParser.calculateCoverage([]) };
     }
     const filteredLines = file.lines.filter((line) => changedLineNumbers.has(line.lineNumber));
-    const coveredCount = filteredLines.filter((line) => line.state === 'covered').length;
     return {
         ...file,
         lines: filteredLines,
-        lineMetrics: { covered: coveredCount, total: filteredLines.length },
+        coverage: CoberturaCoverageParser.calculateCoverage(filteredLines),
     };
 }
 
@@ -63268,6 +63278,7 @@ function filterFileLines(file, changedLineNumbers) {
 
 
 ;// CONCATENATED MODULE: ./src/markdown/generator.ts
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -63320,7 +63331,7 @@ function generateMarkdown(packages, fileContents, overallMetrics, options = {}, 
     // Step 3: Sort packages
     sortPackages(packageSections);
     // Step 4: Calculate PR metrics
-    const prMetrics = calculatePRMetrics(packages);
+    const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(packages);
     // Step 5: Render Markdown with truncation
     if (packageSections.length === 0) {
         const markdown = buildMarkdownForNoUncoveredContent(badges, prMetrics);
@@ -63339,55 +63350,20 @@ function generateMarkdown(packages, fileContents, overallMetrics, options = {}, 
  * Returns counts and flags for uncovered/partial lines, plus the appropriate status icon.
  */
 function classifyFileCoverage(file) {
-    let uncoveredCount = 0;
-    let partialCount = 0;
-    for (const line of file.lines) {
-        if (line.state === 'not-covered') {
-            uncoveredCount++;
-        }
-        else if (line.state === 'partial') {
-            partialCount++;
-        }
-    }
-    const hasUncovered = uncoveredCount > 0;
-    const hasPartial = partialCount > 0;
+    const hasUncoveredLines = file.coverage.linesCovered < file.coverage.totalLines;
+    const hasUncoveredBranches = file.coverage.branchesCovered < file.coverage.totalBranches;
     // Determine status icon: 🔴 if uncovered, 🟠 if only partial, 🟢 if fully covered
     let statusIcon;
-    if (hasUncovered) {
+    if (hasUncoveredLines) {
         statusIcon = FILE_STATUS_ICONS.hasUncovered;
     }
-    else if (hasPartial) {
+    else if (hasUncoveredBranches) {
         statusIcon = FILE_STATUS_ICONS.partialCoverage;
     }
     else {
         statusIcon = FILE_STATUS_ICONS.fullyCovered;
     }
-    return { hasUncovered, hasPartial, uncoveredCount, partialCount, statusIcon };
-}
-/**
- * Calculate PR coverage metrics from packages (only changed lines).
- * Counts all files, not just ones with uncovered lines.
- */
-function calculatePRMetrics(packages) {
-    let coveredLines = 0;
-    let totalLines = 0;
-    let branchCovered = 0;
-    let branchTotal = 0;
-    let hasBranchData = false;
-    for (const pkg of packages) {
-        for (const file of pkg.files) {
-            totalLines += file.lineMetrics.total;
-            coveredLines += file.lineMetrics.covered;
-            if (file.branchMetrics) {
-                hasBranchData = true;
-                branchCovered += file.branchMetrics.covered;
-                branchTotal += file.branchMetrics.total;
-            }
-        }
-    }
-    const linePercent = totalLines === 0 ? 0 : (coveredLines / totalLines) * 100;
-    const branchPercent = hasBranchData && branchTotal > 0 ? (branchCovered / branchTotal) * 100 : null;
-    return { coveredLines, totalLines, linePercent, branchPercent };
+    return { hasUncoveredLines, hasUncoveredBranches, statusIcon };
 }
 // =============================================================================
 // FORMATTING HELPERS
@@ -63420,11 +63396,11 @@ function formatPercentFromRatio(covered, total) {
 /**
  * Format branch percentage or return "n/a" if no data.
  */
-function formatBranchPercentOrNA(branchMetrics) {
-    if (!branchMetrics || branchMetrics.total === 0) {
+function formatPercentOrNaFromRation(covered, total) {
+    if (total === 0) {
         return 'n/a';
     }
-    return formatPercentFromRatio(branchMetrics.covered, branchMetrics.total);
+    return formatPercent((covered / total) * 100);
 }
 // =============================================================================
 // SECTION DATA BUILDERS
@@ -63453,18 +63429,14 @@ function buildPackageSectionData(pkg, fileContents, numberOfSurroundingLines) {
     }
     const header = `\n### ${pkg.name}`;
     const files = [];
-    let totalUncoveredLines = 0;
-    let totalPartialBranches = 0;
     for (const file of pkg.files) {
         const content = file.resolvedPath ? (fileContents.get(file.resolvedPath) ?? []) : [];
         const classification = classifyFileCoverage(file);
-        totalUncoveredLines += classification.uncoveredCount;
-        totalPartialBranches += classification.partialCount;
         files.push({
             filename: file.filename,
             content: renderFileSection(file, content, numberOfSurroundingLines, classification),
-            uncoveredLines: classification.uncoveredCount,
-            partialBranches: classification.partialCount,
+            uncoveredLines: file.coverage.totalLines - file.coverage.linesCovered,
+            partialBranches: file.coverage.totalBranches - file.coverage.branchesCovered,
         });
     }
     sortFiles(files);
@@ -63472,8 +63444,8 @@ function buildPackageSectionData(pkg, fileContents, numberOfSurroundingLines) {
         packageName: pkg.name,
         header,
         files,
-        totalUncoveredLines,
-        totalPartialBranches,
+        totalUncoveredLines: pkg.coverage.totalLines - pkg.coverage.linesCovered,
+        totalPartialBranches: pkg.coverage.totalBranches - pkg.coverage.branchesCovered,
     };
 }
 // =============================================================================
@@ -63604,9 +63576,9 @@ function renderPRSummaryLine(metrics) {
     if (metrics.totalLines === 0) {
         return '<b>0/0</b> changed lines covered';
     }
-    const linePercentStr = formatPercentFromRatio(metrics.coveredLines, metrics.totalLines);
-    const branchPercentStr = metrics.branchPercent !== null ? formatPercent(metrics.branchPercent) : 'n/a';
-    return `<b>${formatRatio(metrics.coveredLines, metrics.totalLines)}</b> changed lines covered (Lines: <b>${linePercentStr}</b>, Branches: <b>${branchPercentStr}</b>)`;
+    const linePercentStr = formatPercentFromRatio(metrics.linesCovered, metrics.totalLines);
+    const branchPercentStr = metrics.totalBranches > 0 ? formatPercentOrNaFromRation(metrics.branchesCovered, metrics.totalBranches) : 'n/a';
+    return `<b>${formatRatio(metrics.linesCovered, metrics.totalLines)}</b> changed lines covered (Lines: <b>${linePercentStr}</b>, Branches: <b>${branchPercentStr}</b>)`;
 }
 /**
  * Render truncation notice with counts of omitted items.
@@ -63632,8 +63604,8 @@ function generateLegend() {
  */
 function generateCoverageBadges(overallMetrics) {
     const badges = [];
-    badges.push(renderBadge('Line Coverage', overallMetrics.lineCoverage));
-    badges.push(renderBadge('Branch Coverage', overallMetrics.branchCoverage));
+    badges.push(renderBadge('Line Coverage', overallMetrics.lineCoverage * 100));
+    badges.push(renderBadge('Branch Coverage', overallMetrics.branchCoverage ? overallMetrics.branchCoverage * 100 : undefined));
     return badges.join(' ');
 }
 /**
@@ -63673,17 +63645,17 @@ function getBadgeColor(percent) {
  * Uses inline format for fully covered files, details block for files with uncovered lines.
  */
 function renderFileSection(file, fileLines, numberOfSurroundingLines, classification) {
-    const { hasUncovered, hasPartial, statusIcon } = classification;
+    const { hasUncoveredLines, hasUncoveredBranches, statusIcon } = classification;
     // Fully covered - use inline format
-    if (!hasUncovered && !hasPartial) {
-        return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered`;
+    if (!hasUncoveredLines && !hasUncoveredBranches) {
+        return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${formatRatio(file.coverage.linesCovered, file.coverage.totalLines)}</b> changed lines covered<br>`;
     }
     // Has uncovered/partial lines - use details block
     const lines = [];
-    const linePercent = formatPercentFromRatio(file.lineMetrics.covered, file.lineMetrics.total);
-    const branchPercent = formatBranchPercentOrNA(file.branchMetrics);
+    const linePercent = formatPercentFromRatio(file.coverage.linesCovered, file.coverage.totalLines);
+    const branchPercent = formatPercentOrNaFromRation(file.coverage.branchesCovered, file.coverage.totalBranches);
     lines.push(`<details>`);
-    lines.push(`<summary>${statusIcon} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered (Lines: <b>${linePercent}</b>, Branches: <b>${branchPercent}</b>)</summary>`);
+    lines.push(`<summary>${statusIcon} <b>${file.filename}</b> — <b>${formatRatio(file.coverage.linesCovered, file.coverage.totalLines)}</b> changed lines covered (Lines: <b>${linePercent}</b>, Branches: <b>${branchPercent}</b>)</summary>`);
     lines.push('');
     const extension = getFileExtension(file.filename);
     lines.push(`\`\`\`${extension}`);
@@ -63743,7 +63715,8 @@ function renderAnnotatedLines(coverageLines, fileLines, numberOfSurroundingLines
     // Find all uncovered/partial lines (the "interesting" lines)
     const interestingLineNumbers = new Set();
     for (const line of sortedLines) {
-        if (line.state === 'not-covered' || line.state === 'partial') {
+        const branchesCovered = line.branchesCovered === line.totalBranches;
+        if (!line.covered || !branchesCovered) {
             interestingLineNumbers.add(line.lineNumber);
         }
     }
@@ -63768,7 +63741,7 @@ function renderAnnotatedLines(coverageLines, fileLines, numberOfSurroundingLines
     // Helper to render a single annotated line
     const renderLine = (lineNum) => {
         const line = lineMap.get(lineNum);
-        const icon = line ? COVERAGE_ICONS[line.state] : COVERAGE_ICONS['no-info'];
+        const icon = getCoverageIcon(line);
         const lineNumStr = lineNum.toString().padStart(3, ' ');
         const content = getLineContent(lineNum);
         return `${lineNumStr} ${icon} ${content}`;
@@ -63812,12 +63785,21 @@ function renderGap(prevLine, nextLine, lineMap, getLineContent) {
         // Show the single hidden line
         const gapLineNum = prevLine + 1;
         const gapLine = lineMap.get(gapLineNum);
-        const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info'];
+        const gapIcon = getCoverageIcon(gapLine);
         const gapLineNumStr = gapLineNum.toString().padStart(3, ' ');
         const gapContent = getLineContent(gapLineNum);
         return `${gapLineNumStr} ${gapIcon} ${gapContent}`;
     }
     return '...';
+}
+function getCoverageIcon(line) {
+    if (!line)
+        return COVERAGE_ICONS['no-info'];
+    if (!line.covered)
+        return COVERAGE_ICONS['not-covered'];
+    if (line.branchesCovered < line.totalBranches)
+        return COVERAGE_ICONS.partial;
+    return COVERAGE_ICONS.covered;
 }
 // =============================================================================
 // SORTING
@@ -63917,7 +63899,7 @@ async function processCoverage(inputs, logger) {
         return null;
     }
     const totalFiles = reports.reduce((s1, r) => s1 + r.packages.reduce((s2, p) => s2 + p.files.length, 0), 0);
-    logger.info(`Found coverage data in ${reports.length} for ${totalFiles} files total`);
+    logger.info(`Found coverage data in ${reports.length} reports for ${totalFiles} files total`);
     // Merge all reports into one (including sources)
     const mergedPackages = await mergeReportAndResolveSources(reports, inputs.sourceDir, logger);
     // Get changed lines using git if filtering is enabled and we have comparison information
@@ -63934,24 +63916,21 @@ async function processCoverage(inputs, logger) {
         }
     }
     // Apply filters to the coverage report
-    let filteredPackages = mergedPackages;
-    if (changedLinesPerFileMap) {
-        filteredPackages = filterByChangedLines(filteredPackages, changedLinesPerFileMap, logger);
-    }
-    filteredPackages = filterByGlob(filteredPackages, inputs.globPattern, logger);
+    const globFilteredPackages = filterByGlob(mergedPackages, inputs.globPattern, logger);
+    const fileFilteredPackages = changedLinesPerFileMap ? filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger) : globFilteredPackages;
     // Read file contents from disk using resolved paths
-    const fileContents = await readFileContents(filteredPackages);
-    for (const filteredPackage of filteredPackages) {
+    const fileContents = await readFileContents(fileFilteredPackages);
+    for (const filteredPackage of fileFilteredPackages) {
         for (const file of filteredPackage.files) {
             logger.debug?.(`Generating markdown for ${file.resolvedPath} with ${file.lines.length} changed lines`);
         }
     }
-    const overallMetrics = calculateOverallMetrics(mergedPackages);
-    const prMetrics = calculateOverallMetrics(filteredPackages);
+    const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages);
+    const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(fileFilteredPackages);
     logger.info(`Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`);
     logger.info(`Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`);
     // Generate Markdown from filtered report
-    const markdown = generateMarkdown(filteredPackages, fileContents, overallMetrics, {}, logger);
+    const markdown = generateMarkdown(fileFilteredPackages, fileContents, overallMetrics, {}, logger);
     return {
         markdown,
         lineCoverage: overallMetrics.lineCoverage,
@@ -63973,38 +63952,6 @@ async function firstExistingDirectory(paths) {
         }
     }
     return undefined;
-}
-/** Priority order for restrictive merging: lower = worse (takes precedence) */
-const statePriority = {
-    'not-covered': 0,
-    partial: 1,
-    covered: 2,
-};
-/**
- * Merge two FileCoverage objects using restrictive line state merging.
- * For lines present in both: take the "worst" state (not-covered > partial > covered).
- * For lines present in only one: use that state.
- */
-function mergeFileCoverage(existing, incoming) {
-    const worse = (a, b) => (statePriority[a.state] <= statePriority[b.state] ? a : b);
-    const linesByNumber = new Map();
-    // seed with existing
-    for (const l of existing.lines)
-        linesByNumber.set(l.lineNumber, l);
-    // merge incoming
-    for (const l of incoming.lines) {
-        const prev = linesByNumber.get(l.lineNumber);
-        linesByNumber.set(l.lineNumber, prev ? worse(prev, l) : l);
-    }
-    const lines = [...linesByNumber.values()].sort((a, b) => a.lineNumber - b.lineNumber);
-    const lineMetrics = { covered: lines.reduce((n, l) => n + (l.state === 'covered' ? 1 : 0), 0), total: lines.length };
-    const sumMetrics = (a, b) => a && b ? { covered: a.covered + b.covered, total: a.total + b.total } : (a ?? b);
-    return {
-        ...existing,
-        lines,
-        lineMetrics,
-        branchMetrics: sumMetrics(existing.branchMetrics, incoming.branchMetrics),
-    };
 }
 /**
  * Merge multiple coverage reports into one.
@@ -64032,9 +63979,9 @@ async function mergeReportAndResolveSources(reports, fallbackSource, logger) {
             // Add files with resolved paths (merge duplicates)
             for (const file of pkg.files) {
                 const resolvedPath = external_node_path_.resolve(source, file.filename);
-                if (fileMap.has(resolvedPath)) {
-                    const existing = fileMap.get(resolvedPath);
-                    const merged = mergeFileCoverage(existing, { resolvedPath, ...file });
+                const existing = fileMap.get(resolvedPath);
+                if (existing) {
+                    const merged = CoberturaCoverageParser.merge(existing, file.lines);
                     fileMap.set(resolvedPath, merged);
                     logger.debug?.(`Merged duplicate file: ${file.filename}`);
                 }
@@ -64045,36 +63992,17 @@ async function mergeReportAndResolveSources(reports, fallbackSource, logger) {
         }
     }
     // Convert file maps back to arrays for the final report
-    const packages = Array.from(packageMap.values()).map(({ name, fileMap }) => ({
-        name,
-        files: Array.from(fileMap.values()),
-    }));
+    const packages = Array.from(packageMap.values()).map(({ name, fileMap }) => {
+        const files = Array.from(fileMap.values());
+        return {
+            name,
+            files,
+            coverage: CoberturaCoverageParser.calculateFileCoverage(files),
+        };
+    });
     const totalFiles = packages.reduce((sum, pkg) => sum + pkg.files.length, 0);
     logger.info(`Merged coverage data for ${totalFiles} distinct files`);
     return packages;
-}
-/**
- * Calculate overall coverage metrics from a merged packages.
- */
-function calculateOverallMetrics(packages) {
-    let lineCovered = 0;
-    let lineTotal = 0;
-    let branchCovered = 0;
-    let branchTotal = 0;
-    for (const pkg of packages) {
-        for (const file of pkg.files) {
-            lineCovered += file.lineMetrics.covered;
-            lineTotal += file.lineMetrics.total;
-            if (file.branchMetrics) {
-                branchCovered += file.branchMetrics.covered;
-                branchTotal += file.branchMetrics.total;
-            }
-        }
-    }
-    return {
-        lineCoverage: lineTotal > 0 ? (lineCovered / lineTotal) * 100 : 0,
-        branchCoverage: branchTotal > 0 ? (branchCovered / branchTotal) * 100 : 0,
-    };
 }
 /**
  * Read file contents from disk for all files in the coverage packages.
@@ -68396,7 +68324,7 @@ async function postComment(octokit, context, pullNumber, markdown, updateExistin
 __nccwpck_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1635);
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__nccwpck_require__.n(_actions_core__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _action_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6003);
+/* harmony import */ var _action_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(641);
 /* harmony import */ var _github_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(5238);
 
 

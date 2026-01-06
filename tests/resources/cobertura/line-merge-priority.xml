@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<coverage line-rate="0.8" branch-rate="0.5" lines-covered="4" lines-valid="5" branches-covered="1" branches-valid="2">
+<coverage line-rate="0.75" branch-rate="1.0" lines-covered="3" lines-valid="4" branches-covered="2" branches-valid="2">
   <packages>
     <package name="merge.priority" line-rate="0.8" branch-rate="0.5" complexity="3">
       <classes>
@@ -7,7 +7,7 @@
         <class name="ClassOne" filename="src/priority.ts" line-rate="0.5" branch-rate="0" complexity="1">
           <lines>
             <line number="1" hits="0" branch="False" />
-            <line number="5" hits="0" branch="False" />
+            <line number="5" hits="0" branch="True" condition-coverage="0% (0/2)" />
           </lines>
         </class>
         <!-- Second class: line 5 is partial (should win over not-covered) -->

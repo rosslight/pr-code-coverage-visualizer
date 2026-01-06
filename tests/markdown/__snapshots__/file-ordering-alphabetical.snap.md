@@ -1,5 +1,5 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-50%25-yellowgreen.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-50%25-yellowgreen.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-0%25-red.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n%2Fa-brightgreen.svg?style=flat)
 
 ---
 

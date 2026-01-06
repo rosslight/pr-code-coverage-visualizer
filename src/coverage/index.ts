@@ -1,9 +1,7 @@
 export type {
-  CoverageMetrics,
   CoverageReport,
   FileCoverage,
   LineCoverage,
-  LineCoverageState,
   PackageCoverage,
 } from './model.js'
 

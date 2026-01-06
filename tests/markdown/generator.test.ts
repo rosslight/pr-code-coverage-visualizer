@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createCliLogger } from '../../src/core/process-coverage.js'
-import type { PackageCoverage } from '../../src/coverage/model.js'
+import type { PackageCoverage, PercentageCoverageMetrics } from '../../src/coverage/model.js'
 import { generateMarkdown, MINIMUM_CHARACTERS } from '../../src/markdown/index.js'
+import { CoberturaCoverageParser } from '../../src/coverage/index.js'
 
 type FakeFileInfo = {
   resolvedPath: string
@@ -27,6 +28,22 @@ function createFakeFileContents(fileInfos: FakeFileInfo[]): Map<string, string[]
   return contents
 }
 
+function createFakeCoverage(
+  linesCovered: number,
+  totalLines: number,
+  branchesCovered: number,
+  totalBranches: number,
+): PercentageCoverageMetrics {
+  return {
+    linesCovered,
+    totalLines,
+    branchesCovered,
+    totalBranches,
+    lineCoverage: totalLines > 0 ? linesCovered / totalLines : 0,
+    branchCoverage: totalBranches > 0 ? branchesCovered / totalBranches : undefined,
+  }
+}
+
 describe('generateMarkdown', () => {
   it('generates markdown for a simple packages', async () => {
     const packages: PackageCoverage[] = [
@@ -37,22 +54,22 @@ describe('generateMarkdown', () => {
             filename: 'src/example.ts',
             resolvedPath: '/repo/src/example.ts',
             lines: [
-              { lineNumber: 1, state: 'covered' },
-              { lineNumber: 2, state: 'covered' },
-              { lineNumber: 3, state: 'not-covered' },
-              { lineNumber: 4, state: 'partial' },
+              { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 4, covered: true, branchesCovered: 1, totalBranches: 2 },
             ],
-            lineMetrics: { covered: 3, total: 4 },
-            branchMetrics: { covered: 0, total: 1 },
+            coverage: createFakeCoverage(3, 4, 1, 2),
           },
         ],
+        coverage: createFakeCoverage(3, 4, 1, 2),
       },
     ]
 
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/example.ts', numberOfLines: 10 }]),
-      { lineCoverage: 42.24, branchCoverage: undefined },
+      CoberturaCoverageParser.calculatePackageCoverage(packages),
       {},
       logger,
     )
@@ -69,13 +86,14 @@ describe('generateMarkdown', () => {
             filename: 'src/core/utils.cs',
             resolvedPath: '/repo/src/core/utils.cs',
             lines: [
-              { lineNumber: 10, state: 'covered' },
-              { lineNumber: 11, state: 'covered' },
-              { lineNumber: 12, state: 'covered' },
+              { lineNumber: 10, covered: true, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 11, covered: true, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 12, covered: true, branchesCovered: 0, totalBranches: 0 },
             ],
-            lineMetrics: { covered: 3, total: 3 },
+            coverage: createFakeCoverage(3, 3, 0, 0),
           },
         ],
+        coverage: createFakeCoverage(3, 3, 0, 0),
       },
       {
         name: 'Package.Tests',
@@ -84,12 +102,13 @@ describe('generateMarkdown', () => {
             filename: 'tests/test_utils.cs',
             resolvedPath: '/repo/tests/test_utils.cs',
             lines: [
-              { lineNumber: 5, state: 'not-covered' },
-              { lineNumber: 6, state: 'not-covered' },
+              { lineNumber: 5, covered: false, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 6, covered: false, branchesCovered: 0, totalBranches: 0 },
             ],
-            lineMetrics: { covered: 0, total: 2 },
+            coverage: createFakeCoverage(0, 2, 0, 0),
           },
         ],
+        coverage: createFakeCoverage(0, 2, 0, 0),
       },
     ]
 
@@ -99,7 +118,7 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/src/core/utils.cs', numberOfLines: 15 },
         { resolvedPath: '/repo/tests/test_utils.cs', numberOfLines: 10 },
       ]),
-      { lineCoverage: 42.24, branchCoverage: undefined },
+      CoberturaCoverageParser.calculatePackageCoverage(packages),
       {},
       logger,
     )
@@ -116,25 +135,25 @@ describe('generateMarkdown', () => {
             filename: 'src/gaps.rs',
             resolvedPath: '/repo/src/gaps.rs',
             lines: [
-              { lineNumber: 1, state: 'covered' },
-              { lineNumber: 2, state: 'covered' },
+              { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 },
               // Gap here
-              { lineNumber: 10, state: 'not-covered' },
-              { lineNumber: 11, state: 'not-covered' },
+              { lineNumber: 10, covered: false, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 11, covered: false, branchesCovered: 0, totalBranches: 0 },
               // Another gap
-              { lineNumber: 50, state: 'partial' },
+              { lineNumber: 50, covered: true, branchesCovered: 0, totalBranches: 2 },
             ],
-            lineMetrics: { covered: 2, total: 5 },
-            branchMetrics: { covered: 0, total: 1 },
+            coverage: createFakeCoverage(3, 5, 0, 2),
           },
         ],
+        coverage: createFakeCoverage(3, 5, 0, 2),
       },
     ]
 
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([{ resolvedPath: '/repo/src/gaps.rs', numberOfLines: 50 }]),
-      { lineCoverage: 42.24, branchCoverage: undefined },
+      CoberturaCoverageParser.calculatePackageCoverage(packages),
       {},
       logger,
     )
@@ -148,13 +167,14 @@ describe('generateMarkdown', () => {
       {
         name: 'EmptyPackage',
         files: [],
+        coverage: createFakeCoverage(0, 0, 0, 0),
       },
     ]
 
     const markdown = generateMarkdown(
       packages,
       createFakeFileContents([]),
-      { lineCoverage: 42.24, branchCoverage: undefined },
+      CoberturaCoverageParser.calculatePackageCoverage(packages),
       {},
       logger,
     )
@@ -171,23 +191,23 @@ describe('generateMarkdown', () => {
             filename: 'src/file1.py',
             resolvedPath: '/repo/src/file1.py',
             lines: [
-              { lineNumber: 1, state: 'covered' },
-              { lineNumber: 2, state: 'covered' },
+              { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 },
             ],
-            lineMetrics: { covered: 2, total: 2 },
+            coverage: createFakeCoverage(2, 2, 0, 0),
           },
           {
             filename: 'src/file2.py',
             resolvedPath: '/repo/src/file2.py',
             lines: [
-              { lineNumber: 1, state: 'not-covered' },
-              { lineNumber: 2, state: 'not-covered' },
-              { lineNumber: 3, state: 'partial' },
+              { lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 2 },
             ],
-            lineMetrics: { covered: 1, total: 3 },
-            branchMetrics: { covered: 0, total: 1 },
+            coverage: createFakeCoverage(1, 3, 0, 2),
           },
         ],
+        coverage: createFakeCoverage(3, 5, 0, 2),
       },
     ]
 
@@ -195,9 +215,9 @@ describe('generateMarkdown', () => {
       packages,
       createFakeFileContents([
         { resolvedPath: '/repo/src/file1.py', numberOfLines: 3 },
-        { resolvedPath: '/repo/src/file2.py', numberOfLines: 3 },
+        { resolvedPath: '/repo/src/file2.py', numberOfLines: 6 },
       ]),
-      { lineCoverage: 10, branchCoverage: 10 },
+      CoberturaCoverageParser.calculatePackageCoverage(packages),
       {},
       logger,
     )
@@ -213,22 +233,23 @@ describe('generateMarkdown', () => {
           {
             filename: 'test.cs',
             resolvedPath: '/repo/test.cs',
-            lines: [{ lineNumber: 1, state: 'not-covered' }],
-            lineMetrics: { covered: 0, total: 1 },
+            lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+            coverage: createFakeCoverage(0, 1, 0, 0),
           },
           {
             filename: 'test.rs',
             resolvedPath: '/repo/test.rs',
-            lines: [{ lineNumber: 1, state: 'not-covered' }],
-            lineMetrics: { covered: 0, total: 1 },
+            lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+            coverage: createFakeCoverage(0, 1, 0, 0),
           },
           {
             filename: 'test.tsx',
             resolvedPath: '/repo/test.tsx',
-            lines: [{ lineNumber: 1, state: 'not-covered' }],
-            lineMetrics: { covered: 0, total: 1 },
+            lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+            coverage: createFakeCoverage(0, 1, 0, 0),
           },
         ],
+        coverage: createFakeCoverage(0, 3, 0, 0),
       },
     ]
 
@@ -239,7 +260,7 @@ describe('generateMarkdown', () => {
         { resolvedPath: '/repo/test.rs', numberOfLines: 2 },
         { resolvedPath: '/repo/test.tsx', numberOfLines: 3 },
       ]),
-      { lineCoverage: 20, branchCoverage: 20 },
+      CoberturaCoverageParser.calculatePackageCoverage(packages),
       {},
       logger,
     )
@@ -260,19 +281,20 @@ describe('generateMarkdown', () => {
               resolvedPath: '/repo/src/test.ts',
               // Coverage starts at line 5, but file has lines 1-10
               lines: [
-                { lineNumber: 5, state: 'not-covered' },
-                { lineNumber: 6, state: 'covered' },
+                { lineNumber: 5, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 6, covered: true, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 1, total: 2 },
+              coverage: createFakeCoverage(1, 2, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(1, 2, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
-        { lineCoverage: 30, branchCoverage: 30 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -290,20 +312,21 @@ describe('generateMarkdown', () => {
               resolvedPath: '/repo/src/test.ts',
               // Coverage ends at line 3, but file has 10 lines
               lines: [
-                { lineNumber: 1, state: 'covered' },
-                { lineNumber: 2, state: 'not-covered' },
-                { lineNumber: 3, state: 'covered' },
+                { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 2, total: 3 },
+              coverage: createFakeCoverage(2, 3, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(2, 3, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
-        { lineCoverage: 40, branchCoverage: 40 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -321,22 +344,23 @@ describe('generateMarkdown', () => {
               resolvedPath: '/repo/src/test.ts',
               // Lines 2 and 4 are uncovered, line 3 is covered (1-line gap)
               lines: [
-                { lineNumber: 1, state: 'covered' },
-                { lineNumber: 2, state: 'not-covered' },
-                { lineNumber: 3, state: 'covered' },
-                { lineNumber: 4, state: 'not-covered' },
-                { lineNumber: 5, state: 'covered' },
+                { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 4, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 5, covered: true, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 3, total: 5 },
+              coverage: createFakeCoverage(3, 5, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(3, 5, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
-        { lineCoverage: 50, branchCoverage: 50 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -354,24 +378,25 @@ describe('generateMarkdown', () => {
               resolvedPath: '/repo/src/test.ts',
               // Lines 2 and 10 are uncovered with a large gap between
               lines: [
-                { lineNumber: 1, state: 'covered' },
-                { lineNumber: 2, state: 'not-covered' },
-                { lineNumber: 3, state: 'covered' },
+                { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 },
                 // Gap: lines 4-5 not in coverage data
-                { lineNumber: 6, state: 'covered' },
-                { lineNumber: 7, state: 'not-covered' },
-                { lineNumber: 8, state: 'covered' },
+                { lineNumber: 6, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 7, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 8, covered: true, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 4, total: 6 },
+              coverage: createFakeCoverage(4, 6, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(4, 6, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 15 }]),
-        { lineCoverage: 60, branchCoverage: 60 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -390,20 +415,21 @@ describe('generateMarkdown', () => {
               // Uncovered line is at 3, so with surrounding=1, lines 2-4 would be shown
               // Only line 1 is hidden - should show it instead of ellipsis
               lines: [
-                { lineNumber: 2, state: 'covered' },
-                { lineNumber: 3, state: 'not-covered' },
-                { lineNumber: 4, state: 'covered' },
+                { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 4, covered: true, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 3, total: 4 },
+              coverage: createFakeCoverage(2, 3, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(2, 3, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 6 }]),
-        { lineCoverage: 70, branchCoverage: 70 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -421,21 +447,22 @@ describe('generateMarkdown', () => {
               resolvedPath: '/repo/src/test.ts',
               // Last shown line is 4, file has 5 lines, so only line 5 is hidden
               lines: [
-                { lineNumber: 1, state: 'covered' },
-                { lineNumber: 2, state: 'covered' },
-                { lineNumber: 3, state: 'not-covered' },
-                { lineNumber: 4, state: 'covered' },
+                { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 4, covered: true, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 4, total: 5 },
+              coverage: createFakeCoverage(4, 5, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(4, 5, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
-        { lineCoverage: 80, branchCoverage: 80 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -454,19 +481,26 @@ describe('generateMarkdown', () => {
               filename: 'src/missing.ts',
               resolvedPath: '/repo/src/missing.ts',
               lines: [
-                { lineNumber: 1, state: 'not-covered' },
-                { lineNumber: 2, state: 'not-covered' },
+                { lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 0, total: 2 },
+              coverage: createFakeCoverage(0, 2, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 2, 0, 0),
         },
       ]
 
       // Empty map - file not found on disk
       const fileContents = new Map<string, string[]>()
 
-      const markdown = generateMarkdown(packages, fileContents, { lineCoverage: 42.24, branchCoverage: 50 }, {}, logger)
+      const markdown = generateMarkdown(
+        packages,
+        fileContents,
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
+        {},
+        logger,
+      )
 
       await expect(markdown).toMatchFileSnapshot('./__snapshots__/file-not-found.snap.md')
     })
@@ -481,20 +515,21 @@ describe('generateMarkdown', () => {
               resolvedPath: '/repo/src/short.ts',
               // Coverage says line 100, but file only has 3 lines
               lines: [
-                { lineNumber: 99, state: 'covered' },
-                { lineNumber: 100, state: 'not-covered' },
-                { lineNumber: 101, state: 'covered' },
+                { lineNumber: 99, covered: true, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 100, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 101, covered: true, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 2, total: 3 },
+              coverage: createFakeCoverage(2, 3, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(2, 3, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/src/short.ts', numberOfLines: 3 }]),
-        { lineCoverage: 90, branchCoverage: 90 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -512,10 +547,11 @@ describe('generateMarkdown', () => {
             {
               filename: 'a.ts',
               resolvedPath: '/repo/a.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 1, 0, 0),
         },
       ]
 
@@ -523,7 +559,7 @@ describe('generateMarkdown', () => {
         generateMarkdown(
           packages,
           createFakeFileContents([{ resolvedPath: '/repo/a.ts', numberOfLines: 1 }]),
-          { lineCoverage: 100, branchCoverage: 100 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {
             maxCharacters: 100,
           },
@@ -540,17 +576,18 @@ describe('generateMarkdown', () => {
             {
               filename: 'small.ts',
               resolvedPath: '/repo/small.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 1, 0, 0),
         },
       ]
 
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/small.ts', numberOfLines: 2 }]),
-        { lineCoverage: 42.24, branchCoverage: 50 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {
           maxCharacters: 2000,
         },
@@ -569,22 +606,23 @@ describe('generateMarkdown', () => {
             {
               filename: 'file1.ts',
               resolvedPath: '/repo/file1.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
             {
               filename: 'file2.ts',
               resolvedPath: '/repo/file2.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
             {
               filename: 'file3.ts',
               resolvedPath: '/repo/file3.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 3, 0, 0),
         },
       ]
 
@@ -595,7 +633,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/file2.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
         ]),
-        { lineCoverage: 42.24, branchCoverage: 50 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         { maxCharacters: 1000 },
         logger,
       )
@@ -614,12 +652,13 @@ describe('generateMarkdown', () => {
               filename: 'pkg1/a.ts',
               resolvedPath: '/repo/pkg1/a.ts',
               lines: [
-                { lineNumber: 1, state: 'not-covered' },
-                { lineNumber: 4, state: 'not-covered' },
+                { lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 },
+                { lineNumber: 4, covered: false, branchesCovered: 0, totalBranches: 0 },
               ],
-              lineMetrics: { covered: 0, total: 1 },
+              coverage: createFakeCoverage(0, 2, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 2, 0, 0),
         },
         {
           name: 'Pkg2',
@@ -627,10 +666,11 @@ describe('generateMarkdown', () => {
             {
               filename: 'pkg2/b.ts',
               resolvedPath: '/repo/pkg2/b.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 1, 0, 0),
         },
         {
           name: 'Pkg3',
@@ -638,10 +678,11 @@ describe('generateMarkdown', () => {
             {
               filename: 'pkg3/c.ts',
               resolvedPath: '/repo/pkg3/c.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 1, 0, 0),
         },
       ]
 
@@ -652,7 +693,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/pkg2/b.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/pkg3/c.ts', numberOfLines: 2 },
         ]),
-        { lineCoverage: 42.24, branchCoverage: 50 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         { maxCharacters: 900 },
         logger,
       )
@@ -671,28 +712,29 @@ describe('generateMarkdown', () => {
             {
               filename: 'file1.ts',
               resolvedPath: '/repo/file1.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
             {
               filename: 'file2.ts',
               resolvedPath: '/repo/file2.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
             {
               filename: 'file3.ts',
               resolvedPath: '/repo/file3.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
             {
               filename: 'file4.ts',
               resolvedPath: '/repo/file4.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 4, 0, 0),
         },
       ]
 
@@ -704,7 +746,7 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file4.ts', numberOfLines: 2 },
         ]),
-        { lineCoverage: 42.24, branchCoverage: 50 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         { maxCharacters: 1000 },
         logger,
       )
@@ -725,10 +767,11 @@ describe('generateMarkdown', () => {
             {
               filename: 'test.ts',
               resolvedPath: '/repo/test.ts',
-              lines: [{ lineNumber: 1, state: 'not-covered' }],
-              lineMetrics: { covered: 0, total: 1 },
+              lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+              coverage: createFakeCoverage(0, 1, 0, 0),
             },
           ],
+          coverage: createFakeCoverage(0, 1, 0, 0),
         },
       ]
 
@@ -736,7 +779,7 @@ describe('generateMarkdown', () => {
       const markdown = generateMarkdown(
         packages,
         createFakeFileContents([{ resolvedPath: '/repo/test.ts', numberOfLines: 2 }]),
-        { lineCoverage: 42.24, branchCoverage: 50 },
+        CoberturaCoverageParser.calculatePackageCoverage(packages),
         {},
         logger,
       )
@@ -756,10 +799,11 @@ describe('generateMarkdown', () => {
               {
                 filename: 'low.ts',
                 resolvedPath: '/repo/low.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(0, 1, 0, 0),
           },
           {
             name: 'HighUncovered',
@@ -768,13 +812,14 @@ describe('generateMarkdown', () => {
                 filename: 'high.ts',
                 resolvedPath: '/repo/high.ts',
                 lines: [
-                  { lineNumber: 1, state: 'not-covered' },
-                  { lineNumber: 2, state: 'not-covered' },
-                  { lineNumber: 3, state: 'not-covered' },
+                  { lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 },
+                  { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
+                  { lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 0 },
                 ],
-                lineMetrics: { covered: 0, total: 3 },
+                coverage: createFakeCoverage(0, 3, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(0, 3, 0, 0),
           },
         ]
 
@@ -784,7 +829,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/low.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high.ts', numberOfLines: 4 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -800,11 +845,11 @@ describe('generateMarkdown', () => {
               {
                 filename: 'low.ts',
                 resolvedPath: '/repo/low.ts',
-                lines: [{ lineNumber: 1, state: 'partial' }],
-                lineMetrics: { covered: 0, total: 1 },
-                branchMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 2 }],
+                coverage: createFakeCoverage(1, 1, 0, 2),
               },
             ],
+            coverage: createFakeCoverage(1, 1, 0, 2),
           },
           {
             name: 'HighPartial',
@@ -813,13 +858,13 @@ describe('generateMarkdown', () => {
                 filename: 'high.ts',
                 resolvedPath: '/repo/high.ts',
                 lines: [
-                  { lineNumber: 1, state: 'partial' },
-                  { lineNumber: 2, state: 'partial' },
+                  { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 2 },
+                  { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 2 },
                 ],
-                lineMetrics: { covered: 0, total: 2 },
-                branchMetrics: { covered: 0, total: 2 },
+                coverage: createFakeCoverage(2, 2, 0, 4),
               },
             ],
+            coverage: createFakeCoverage(2, 2, 0, 4),
           },
         ]
 
@@ -829,7 +874,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/low.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high.ts', numberOfLines: 3 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -845,10 +890,11 @@ describe('generateMarkdown', () => {
               {
                 filename: 'zebra.ts',
                 resolvedPath: '/repo/zebra.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(0, 1, 0, 0),
           },
           {
             name: 'AlphaPackage',
@@ -856,10 +902,11 @@ describe('generateMarkdown', () => {
               {
                 filename: 'alpha.ts',
                 resolvedPath: '/repo/alpha.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(0, 1, 0, 0),
           },
         ]
 
@@ -869,7 +916,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -887,16 +934,17 @@ describe('generateMarkdown', () => {
               {
                 filename: 'uncovered.ts',
                 resolvedPath: '/repo/uncovered.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
               {
                 filename: 'covered.ts',
                 resolvedPath: '/repo/covered.ts',
-                lines: [{ lineNumber: 1, state: 'covered' }],
-                lineMetrics: { covered: 1, total: 1 },
+                lines: [{ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(1, 1, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(1, 2, 0, 0),
           },
         ]
 
@@ -906,7 +954,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/uncovered.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/covered.ts', numberOfLines: 2 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -922,20 +970,21 @@ describe('generateMarkdown', () => {
               {
                 filename: 'low-uncovered.ts',
                 resolvedPath: '/repo/low-uncovered.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
               {
                 filename: 'high-uncovered.ts',
                 resolvedPath: '/repo/high-uncovered.ts',
                 lines: [
-                  { lineNumber: 1, state: 'not-covered' },
-                  { lineNumber: 2, state: 'not-covered' },
-                  { lineNumber: 3, state: 'not-covered' },
+                  { lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 },
+                  { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
+                  { lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 0 },
                 ],
-                lineMetrics: { covered: 0, total: 3 },
+                coverage: createFakeCoverage(0, 3, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(0, 4, 0, 0),
           },
         ]
 
@@ -945,7 +994,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/low-uncovered.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high-uncovered.ts', numberOfLines: 4 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -961,21 +1010,20 @@ describe('generateMarkdown', () => {
               {
                 filename: 'low-partial.ts',
                 resolvedPath: '/repo/low-partial.ts',
-                lines: [{ lineNumber: 1, state: 'partial' }],
-                lineMetrics: { covered: 0, total: 1 },
-                branchMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 2 }],
+                coverage: createFakeCoverage(1, 1, 0, 2),
               },
               {
                 filename: 'high-partial.ts',
                 resolvedPath: '/repo/high-partial.ts',
                 lines: [
-                  { lineNumber: 1, state: 'partial' },
-                  { lineNumber: 2, state: 'partial' },
+                  { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 2 },
+                  { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 2 },
                 ],
-                lineMetrics: { covered: 0, total: 2 },
-                branchMetrics: { covered: 0, total: 2 },
+                coverage: createFakeCoverage(2, 2, 0, 4),
               },
             ],
+            coverage: createFakeCoverage(3, 3, 0, 6),
           },
         ]
 
@@ -985,7 +1033,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/low-partial.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high-partial.ts', numberOfLines: 3 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -1001,16 +1049,17 @@ describe('generateMarkdown', () => {
               {
                 filename: 'zebra.ts',
                 resolvedPath: '/repo/zebra.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
               {
                 filename: 'alpha.ts',
                 resolvedPath: '/repo/alpha.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(0, 2, 0, 0),
           },
         ]
 
@@ -1020,7 +1069,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -1036,31 +1085,32 @@ describe('generateMarkdown', () => {
               {
                 filename: 'zebra.ts',
                 resolvedPath: '/repo/zebra.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
               {
                 filename: 'covered.ts',
                 resolvedPath: '/repo/covered.ts',
-                lines: [{ lineNumber: 1, state: 'covered' }],
-                lineMetrics: { covered: 1, total: 1 },
+                lines: [{ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(1, 1, 0, 0),
               },
               {
                 filename: 'high-uncovered.ts',
                 resolvedPath: '/repo/high-uncovered.ts',
                 lines: [
-                  { lineNumber: 1, state: 'not-covered' },
-                  { lineNumber: 2, state: 'not-covered' },
+                  { lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 },
+                  { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
                 ],
-                lineMetrics: { covered: 0, total: 2 },
+                coverage: createFakeCoverage(0, 2, 0, 0),
               },
               {
                 filename: 'alpha.ts',
                 resolvedPath: '/repo/alpha.ts',
-                lines: [{ lineNumber: 1, state: 'not-covered' }],
-                lineMetrics: { covered: 0, total: 1 },
+                lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(0, 1, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(1, 5, 0, 0),
           },
         ]
 
@@ -1072,7 +1122,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/high-uncovered.ts', numberOfLines: 3 },
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
-          { lineCoverage: 50, branchCoverage: 50 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )
@@ -1088,16 +1138,17 @@ describe('generateMarkdown', () => {
               {
                 filename: 'zebra.ts',
                 resolvedPath: '/repo/zebra.ts',
-                lines: [{ lineNumber: 1, state: 'covered' }],
-                lineMetrics: { covered: 1, total: 1 },
+                lines: [{ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(1, 1, 0, 0),
               },
               {
                 filename: 'alpha.ts',
                 resolvedPath: '/repo/alpha.ts',
-                lines: [{ lineNumber: 1, state: 'covered' }],
-                lineMetrics: { covered: 1, total: 1 },
+                lines: [{ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }],
+                coverage: createFakeCoverage(1, 1, 0, 0),
               },
             ],
+            coverage: createFakeCoverage(2, 2, 0, 0),
           },
         ]
 
@@ -1107,7 +1158,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
-          { lineCoverage: 100, branchCoverage: 100 },
+          CoberturaCoverageParser.calculatePackageCoverage(packages),
           {},
           logger,
         )

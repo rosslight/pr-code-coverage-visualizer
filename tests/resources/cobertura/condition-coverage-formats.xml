@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<coverage line-rate="1.0" branch-rate="0.6" lines-covered="6" lines-valid="6" branches-covered="6" branches-valid="10">
+<coverage line-rate="1.0" branch-rate="0.078" lines-covered="6" lines-valid="6" branches-covered="9" branches-valid="116">
   <packages>
     <package name="condition.formats" line-rate="1.0" branch-rate="0.6" complexity="6">
       <classes>

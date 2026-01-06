@@ -51,8 +51,10 @@ describe('processCoverage integration', () => {
 
     expect(result).not.toBeNull()
     // Outputs must be computed from the already-filtered data (same as markdown)
-    expect(result?.lineCoverage).toBeCloseTo(50, 5)
-    expect(result?.branchCoverage).toBeCloseTo(75, 5)
+    expect(result?.lineCoverage).toBeCloseTo(0.5, 5)
+    expect(result?.branchCoverage).toBeCloseTo(0.833333, 5)
+    expect(result?.lineCoveragePr).toBeCloseTo(1, 5)
+    expect(result?.branchCoveragePr).toBeCloseTo(0.75, 5)
     expect(result?.markdown).toContain('wanted.ts')
     expect(result?.markdown).not.toContain('ignored.ts')
     await expect(result?.markdown).toMatchFileSnapshot('./__snapshots__/glob-filter.snap.md')

@@ -1,14 +1,14 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-42.24%25-yellowgreen.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n%2Fa-brightgreen.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-60%25-green.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n%2Fa-brightgreen.svg?style=flat)
 
 ---
 
 ## PR Coverage
-<b>2/5</b> changed lines covered (Lines: <b>40%</b>, Branches: <b>0%</b>)
+<b>3/5</b> changed lines covered (Lines: <b>60%</b>, Branches: <b>0%</b>)
 
 ### GapsPackage
 <details>
-<summary>🔴 <b>src/gaps.rs</b> — <b>2/5</b> changed lines covered (Lines: <b>40%</b>, Branches: <b>0%</b>)</summary>
+<summary>🔴 <b>src/gaps.rs</b> — <b>3/5</b> changed lines covered (Lines: <b>60%</b>, Branches: <b>0%</b>)</summary>
 
 ```rust
 ...

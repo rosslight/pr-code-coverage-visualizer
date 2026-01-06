@@ -1,11 +1,6 @@
 import type { Logger } from '../core/index.js'
-import type {
-  CoverageMetrics,
-  FileCoverage,
-  LineCoverage,
-  PackageCoverage,
-  PercentageCoverageMetrics,
-} from '../coverage/model.js'
+import { CoberturaCoverageParser } from '../coverage/index.js'
+import type { FileCoverage, LineCoverage, PackageCoverage, PercentageCoverageMetrics } from '../coverage/model.js'
 
 // =============================================================================
 // CONSTANTS
@@ -47,14 +42,6 @@ export type MarkdownOptions = {
   maxCharacters?: number
 }
 
-/** PR metrics for summary line */
-type PRMetrics = {
-  coveredLines: number
-  totalLines: number
-  linePercent: number
-  branchPercent: number | null
-}
-
 /** Data structure for a package section with its files */
 type PackageSectionData = {
   packageName: string
@@ -74,10 +61,8 @@ type FileSectionData = {
 
 /** Classification result for a file's coverage state */
 type FileCoverageClassification = {
-  hasUncovered: boolean
-  hasPartial: boolean
-  uncoveredCount: number
-  partialCount: number
+  hasUncoveredLines: boolean
+  hasUncoveredBranches: boolean
   statusIcon: string
 }
 
@@ -123,7 +108,7 @@ export function generateMarkdown(
   sortPackages(packageSections)
 
   // Step 4: Calculate PR metrics
-  const prMetrics = calculatePRMetrics(packages)
+  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(packages)
 
   // Step 5: Render Markdown with truncation
   if (packageSections.length === 0) {
@@ -146,61 +131,20 @@ export function generateMarkdown(
  * Returns counts and flags for uncovered/partial lines, plus the appropriate status icon.
  */
 function classifyFileCoverage(file: FileCoverage): FileCoverageClassification {
-  let uncoveredCount = 0
-  let partialCount = 0
-
-  for (const line of file.lines) {
-    if (line.state === 'not-covered') {
-      uncoveredCount++
-    } else if (line.state === 'partial') {
-      partialCount++
-    }
-  }
-
-  const hasUncovered = uncoveredCount > 0
-  const hasPartial = partialCount > 0
+  const hasUncoveredLines = file.coverage.linesCovered < file.coverage.totalLines
+  const hasUncoveredBranches = file.coverage.branchesCovered < file.coverage.totalBranches
 
   // Determine status icon: 🔴 if uncovered, 🟠 if only partial, 🟢 if fully covered
   let statusIcon: string
-  if (hasUncovered) {
+  if (hasUncoveredLines) {
     statusIcon = FILE_STATUS_ICONS.hasUncovered
-  } else if (hasPartial) {
+  } else if (hasUncoveredBranches) {
     statusIcon = FILE_STATUS_ICONS.partialCoverage
   } else {
     statusIcon = FILE_STATUS_ICONS.fullyCovered
   }
 
-  return { hasUncovered, hasPartial, uncoveredCount, partialCount, statusIcon }
-}
-
-/**
- * Calculate PR coverage metrics from packages (only changed lines).
- * Counts all files, not just ones with uncovered lines.
- */
-function calculatePRMetrics(packages: PackageCoverage[]): PRMetrics {
-  let coveredLines = 0
-  let totalLines = 0
-  let branchCovered = 0
-  let branchTotal = 0
-  let hasBranchData = false
-
-  for (const pkg of packages) {
-    for (const file of pkg.files) {
-      totalLines += file.lineMetrics.total
-      coveredLines += file.lineMetrics.covered
-
-      if (file.branchMetrics) {
-        hasBranchData = true
-        branchCovered += file.branchMetrics.covered
-        branchTotal += file.branchMetrics.total
-      }
-    }
-  }
-
-  const linePercent = totalLines === 0 ? 0 : (coveredLines / totalLines) * 100
-  const branchPercent = hasBranchData && branchTotal > 0 ? (branchCovered / branchTotal) * 100 : null
-
-  return { coveredLines, totalLines, linePercent, branchPercent }
+  return { hasUncoveredLines, hasUncoveredBranches, statusIcon }
 }
 
 // =============================================================================
@@ -237,11 +181,11 @@ function formatPercentFromRatio(covered: number, total: number): string {
 /**
  * Format branch percentage or return "n/a" if no data.
  */
-function formatBranchPercentOrNA(branchMetrics: CoverageMetrics | undefined): string {
-  if (!branchMetrics || branchMetrics.total === 0) {
+function formatPercentOrNaFromRation(covered: number, total: number): string {
+  if (total === 0) {
     return 'n/a'
   }
-  return formatPercentFromRatio(branchMetrics.covered, branchMetrics.total)
+  return formatPercent((covered / total) * 100)
 }
 
 // =============================================================================
@@ -283,21 +227,16 @@ function buildPackageSectionData(
   }
   const header = `\n### ${pkg.name}`
   const files: FileSectionData[] = []
-  let totalUncoveredLines = 0
-  let totalPartialBranches = 0
 
   for (const file of pkg.files) {
     const content = file.resolvedPath ? (fileContents.get(file.resolvedPath) ?? []) : []
     const classification = classifyFileCoverage(file)
 
-    totalUncoveredLines += classification.uncoveredCount
-    totalPartialBranches += classification.partialCount
-
     files.push({
       filename: file.filename,
       content: renderFileSection(file, content, numberOfSurroundingLines, classification),
-      uncoveredLines: classification.uncoveredCount,
-      partialBranches: classification.partialCount,
+      uncoveredLines: file.coverage.totalLines - file.coverage.linesCovered,
+      partialBranches: file.coverage.totalBranches - file.coverage.branchesCovered,
     })
   }
 
@@ -307,8 +246,8 @@ function buildPackageSectionData(
     packageName: pkg.name,
     header,
     files,
-    totalUncoveredLines,
-    totalPartialBranches,
+    totalUncoveredLines: pkg.coverage.totalLines - pkg.coverage.linesCovered,
+    totalPartialBranches: pkg.coverage.totalBranches - pkg.coverage.branchesCovered,
   }
 }
 
@@ -319,7 +258,7 @@ function buildPackageSectionData(
 /**
  * Build markdown for case when there are no uncovered lines.
  */
-function buildMarkdownForNoUncoveredContent(badges: string, prMetrics: PRMetrics): string {
+function buildMarkdownForNoUncoveredContent(badges: string, prMetrics: PercentageCoverageMetrics): string {
   const parts: string[] = []
 
   parts.push('## Repo Coverage')
@@ -385,7 +324,7 @@ class CharBudget {
  */
 function buildMarkdownWithinLimitFileLevel(
   badges: string,
-  prMetrics: PRMetrics,
+  prMetrics: PercentageCoverageMetrics,
   legend: string,
   packageSections: PackageSectionData[],
   maxCharacters: number,
@@ -469,15 +408,16 @@ function buildMarkdownWithinLimitFileLevel(
 /**
  * Render PR summary line.
  */
-function renderPRSummaryLine(metrics: PRMetrics): string {
+function renderPRSummaryLine(metrics: PercentageCoverageMetrics): string {
   if (metrics.totalLines === 0) {
     return '<b>0/0</b> changed lines covered'
   }
 
-  const linePercentStr = formatPercentFromRatio(metrics.coveredLines, metrics.totalLines)
-  const branchPercentStr = metrics.branchPercent !== null ? formatPercent(metrics.branchPercent) : 'n/a'
+  const linePercentStr = formatPercentFromRatio(metrics.linesCovered, metrics.totalLines)
+  const branchPercentStr =
+    metrics.totalBranches > 0 ? formatPercentOrNaFromRation(metrics.branchesCovered, metrics.totalBranches) : 'n/a'
 
-  return `<b>${formatRatio(metrics.coveredLines, metrics.totalLines)}</b> changed lines covered (Lines: <b>${linePercentStr}</b>, Branches: <b>${branchPercentStr}</b>)`
+  return `<b>${formatRatio(metrics.linesCovered, metrics.totalLines)}</b> changed lines covered (Lines: <b>${linePercentStr}</b>, Branches: <b>${branchPercentStr}</b>)`
 }
 
 /**
@@ -506,8 +446,10 @@ function generateLegend(): string {
  */
 function generateCoverageBadges(overallMetrics: PercentageCoverageMetrics): string {
   const badges: string[] = []
-  badges.push(renderBadge('Line Coverage', overallMetrics.lineCoverage))
-  badges.push(renderBadge('Branch Coverage', overallMetrics.branchCoverage))
+  badges.push(renderBadge('Line Coverage', overallMetrics.lineCoverage * 100))
+  badges.push(
+    renderBadge('Branch Coverage', overallMetrics.branchCoverage ? overallMetrics.branchCoverage * 100 : undefined),
+  )
   return badges.join(' ')
 }
 
@@ -552,22 +494,22 @@ function renderFileSection(
   numberOfSurroundingLines: number,
   classification: FileCoverageClassification,
 ): string {
-  const { hasUncovered, hasPartial, statusIcon } = classification
+  const { hasUncoveredLines, hasUncoveredBranches, statusIcon } = classification
 
   // Fully covered - use inline format
-  if (!hasUncovered && !hasPartial) {
-    return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered<br>`
+  if (!hasUncoveredLines && !hasUncoveredBranches) {
+    return `✓ ${FILE_STATUS_ICONS.fullyCovered} <b>${file.filename}</b> — <b>${formatRatio(file.coverage.linesCovered, file.coverage.totalLines)}</b> changed lines covered<br>`
   }
 
   // Has uncovered/partial lines - use details block
   const lines: string[] = []
 
-  const linePercent = formatPercentFromRatio(file.lineMetrics.covered, file.lineMetrics.total)
-  const branchPercent = formatBranchPercentOrNA(file.branchMetrics)
+  const linePercent = formatPercentFromRatio(file.coverage.linesCovered, file.coverage.totalLines)
+  const branchPercent = formatPercentOrNaFromRation(file.coverage.branchesCovered, file.coverage.totalBranches)
 
   lines.push(`<details>`)
   lines.push(
-    `<summary>${statusIcon} <b>${file.filename}</b> — <b>${formatRatio(file.lineMetrics.covered, file.lineMetrics.total)}</b> changed lines covered (Lines: <b>${linePercent}</b>, Branches: <b>${branchPercent}</b>)</summary>`,
+    `<summary>${statusIcon} <b>${file.filename}</b> — <b>${formatRatio(file.coverage.linesCovered, file.coverage.totalLines)}</b> changed lines covered (Lines: <b>${linePercent}</b>, Branches: <b>${branchPercent}</b>)</summary>`,
   )
   lines.push('')
 
@@ -643,7 +585,8 @@ function renderAnnotatedLines(
   // Find all uncovered/partial lines (the "interesting" lines)
   const interestingLineNumbers = new Set<number>()
   for (const line of sortedLines) {
-    if (line.state === 'not-covered' || line.state === 'partial') {
+    const branchesCovered = line.branchesCovered === line.totalBranches
+    if (!line.covered || !branchesCovered) {
       interestingLineNumbers.add(line.lineNumber)
     }
   }
@@ -672,7 +615,7 @@ function renderAnnotatedLines(
   // Helper to render a single annotated line
   const renderLine = (lineNum: number): string => {
     const line = lineMap.get(lineNum)
-    const icon = line ? COVERAGE_ICONS[line.state] : COVERAGE_ICONS['no-info']
+    const icon = getCoverageIcon(line)
     const lineNumStr = lineNum.toString().padStart(3, ' ')
     const content = getLineContent(lineNum)
     return `${lineNumStr} ${icon} ${content}`
@@ -731,13 +674,20 @@ function renderGap(
     // Show the single hidden line
     const gapLineNum = prevLine + 1
     const gapLine = lineMap.get(gapLineNum)
-    const gapIcon = gapLine ? COVERAGE_ICONS[gapLine.state] : COVERAGE_ICONS['no-info']
+    const gapIcon = getCoverageIcon(gapLine)
     const gapLineNumStr = gapLineNum.toString().padStart(3, ' ')
     const gapContent = getLineContent(gapLineNum)
     return `${gapLineNumStr} ${gapIcon} ${gapContent}`
   }
 
   return '...'
+}
+
+function getCoverageIcon(line: LineCoverage | undefined): string {
+  if (!line) return COVERAGE_ICONS['no-info']
+  if (!line.covered) return COVERAGE_ICONS['not-covered']
+  if (line.branchesCovered < line.totalBranches) return COVERAGE_ICONS.partial
+  return COVERAGE_ICONS.covered
 }
 
 // =============================================================================

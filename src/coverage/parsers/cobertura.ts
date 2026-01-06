@@ -1,13 +1,12 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import type {
-  CoverageMetrics,
   CoverageReport,
   FileCoverage,
   LineCoverage,
-  LineCoverageState,
-  PackageCoverage,
+  PackageCoverage, PercentageCoverageMetrics,
 } from '../model.js'
 import type { CoverageParser } from './types.js'
+import assert from "node:assert";
 
 /**
  * XML structure types for Cobertura format
@@ -84,14 +83,11 @@ export class CoberturaCoverageParser implements CoverageParser {
     const packages = this.parsePackages(coverage.packages?.package)
     const sources = this.parseSources(coverage.sources?.source)
 
-    const report: CoverageReport = { packages }
-    if (sources.length > 0) {
-      report.sources = sources
+    return {
+      sources: sources.length > 0 ? sources : undefined,
+      hintName: filePath,
+      packages
     }
-    if (filePath !== undefined) {
-      report.hintName = filePath
-    }
-    return report
   }
 
   private parseSources(sources: string | string[] | undefined): string[] {
@@ -106,10 +102,14 @@ export class CoberturaCoverageParser implements CoverageParser {
 
     const packageList = Array.isArray(packages) ? packages : [packages]
 
-    return packageList.map((pkg) => ({
-      name: pkg['@_name'],
-      files: this.parseClasses(pkg.classes?.class),
-    }))
+    return packageList.map((pkg) => {
+      const files = this.parseClasses(pkg.classes?.class)
+      return {
+        name: pkg['@_name'],
+        files: files,
+        coverage: CoberturaCoverageParser.calculateFileCoverage(files)
+      }
+    })
   }
 
   private parseClasses(classes: CoberturaClass | CoberturaClass[] | undefined): FileCoverage[] {
@@ -124,28 +124,34 @@ export class CoberturaCoverageParser implements CoverageParser {
       const filename = cls['@_filename']
       const lines = this.parseLines(cls.lines?.line)
 
-      if (fileMap.has(filename)) {
+      const existing = fileMap.get(filename)
+      let newFile: FileCoverage
+      if (existing) {
         // Merge lines from multiple classes in the same file
-        const existing = fileMap.get(filename)!
-        existing.lines = this.mergeLines(existing.lines, lines)
-        existing.lineMetrics = this.calculateLineMetrics(existing.lines)
-        const mergedBranch = this.mergeBranchMetrics(existing.branchMetrics, this.calculateBranchMetrics(lines))
-        if (mergedBranch) {
-          existing.branchMetrics = mergedBranch
-        }
+        newFile = CoberturaCoverageParser.merge(existing, lines)
       } else {
-        const branchMetrics = this.calculateBranchMetrics(lines)
-        const fileCoverage: FileCoverage = {
+        const coverage = CoberturaCoverageParser.calculateCoverage(lines)
+        newFile = {
           filename,
           lines,
-          lineMetrics: this.calculateLineMetrics(lines),
-          branchMetrics: branchMetrics
+          coverage
         }
-        fileMap.set(filename, fileCoverage)
       }
+      fileMap.set(filename, newFile)
     }
 
     return Array.from(fileMap.values())
+  }
+
+  public static merge(file: FileCoverage, additionalLines: LineCoverage[]): FileCoverage {
+    // Merge lines from multiple classes in the same file
+    const lines = CoberturaCoverageParser.mergeLines(file.lines, additionalLines)
+    const coverage = CoberturaCoverageParser.calculateCoverage(lines)
+    return {
+      lines,
+      filename: file.filename,
+      coverage
+    }
   }
 
   private parseLines(lines: CoberturaLine | CoberturaLine[] | undefined): LineCoverage[] {
@@ -153,38 +159,32 @@ export class CoberturaCoverageParser implements CoverageParser {
 
     const lineList = Array.isArray(lines) ? lines : [lines]
 
-    return lineList.map((line) => ({
+    return lineList.map((line): LineCoverage => ({
       lineNumber: Number.parseInt(line['@_number'], 10),
-      state: this.determineLineState(line),
+      ...this.determineLineState(line),
     }))
   }
 
-  private determineLineState(line: CoberturaLine): LineCoverageState {
+  private determineLineState(line: CoberturaLine): {covered: boolean, branchesCovered: number, totalBranches: number} {
     const hits = Number.parseInt(line['@_hits'], 10)
 
-    if (hits === 0) {
-      return 'not-covered'
-    }
-
-    // Check if this line has branch coverage
-    if (line['@_branch'] === 'True' || line['@_branch'] === 'true') {
-      const conditionCoverage = line['@_condition-coverage']
-      if (conditionCoverage) {
-        // Parse condition coverage like "50% (1/2)" or "100% (2/2)"
-        const match = conditionCoverage.match(/(\d+)%/)
-        if (match && match[1]) {
-          const percentage = Number.parseInt(match[1], 10)
-          if (percentage < 100) {
-            return 'partial'
-          }
-        }
+    let branchesCovered = 0
+    let totalBranches = 0
+    const hasBranch =  line['@_branch'].toLowerCase() === 'true'
+    const conditionCoverage = line['@_condition-coverage']
+    if (hasBranch && conditionCoverage) {
+      // Parse condition coverage like "50% (1/2)" or "100% (2/2)"
+      const match = conditionCoverage.match("\\\((\\d+)\/(\\d+)\\\)")
+      if (match && match[1] && match[2]) {
+        branchesCovered = Number.parseInt(match[1], 10)
+        totalBranches = Number.parseInt(match[2], 10)
       }
     }
 
-    return 'covered'
+    return { covered: hits > 0, branchesCovered, totalBranches }
   }
 
-  private mergeLines(existing: LineCoverage[], newLines: LineCoverage[]): LineCoverage[] {
+  private static mergeLines(existing: LineCoverage[], newLines: LineCoverage[]): LineCoverage[] {
     const lineMap = new Map<number, LineCoverage>()
 
     for (const line of existing) {
@@ -193,59 +193,47 @@ export class CoberturaCoverageParser implements CoverageParser {
 
     for (const line of newLines) {
       const existingLine = lineMap.get(line.lineNumber)
+      let newLine: LineCoverage
       if (existingLine) {
-        // Merge: prefer covered > partial > not-covered
-        existingLine.state = this.mergeLineState(existingLine.state, line.state)
+        assert(existingLine.totalBranches == line.totalBranches, "The number of total branches should be the same, always")
+        newLine = {
+          lineNumber: existingLine.lineNumber,
+          covered: existingLine.covered || line.covered,
+          branchesCovered: Math.max(existingLine.branchesCovered, line.branchesCovered),
+          totalBranches: Math.max(existingLine.totalBranches, line.totalBranches)
+        }
       } else {
-        lineMap.set(line.lineNumber, line)
+        newLine = line
       }
+      assert(newLine.totalBranches === 0 || newLine.totalBranches > 1, "Total Branches should be 0, or at least 2")
+      lineMap.set(line.lineNumber, newLine)
     }
 
     return Array.from(lineMap.values()).sort((a, b) => a.lineNumber - b.lineNumber)
   }
 
-  private mergeLineState(a: LineCoverageState, b: LineCoverageState): LineCoverageState {
-    const priority: Record<LineCoverageState, number> = {
-      covered: 2,
-      partial: 1,
-      'not-covered': 0,
-    }
-    return priority[a] >= priority[b] ? a : b
-  }
-
-  private calculateLineMetrics(lines: LineCoverage[]): CoverageMetrics {
-    const total = lines.length
-    const covered = lines.filter((l) => l.state === 'covered' || l.state === 'partial').length
-    return { covered, total }
-  }
-
-  private calculateBranchMetrics(lines: LineCoverage[]): CoverageMetrics | undefined {
-    const branchLines = lines.filter((l) => l.state === 'partial' || l.state === 'covered')
-    const partialLines = lines.filter((l) => l.state === 'partial')
-
-    // Only return branch metrics if there are branch-related lines
-    if (partialLines.length === 0 && branchLines.length === 0) {
-      return undefined
-    }
-
-    // This is a simplified calculation - actual branch coverage would need
-    // to track individual branches, but for now we track lines with branches
+  public static calculateCoverage(lines: LineCoverage[]): PercentageCoverageMetrics {
+    const linesCovered = lines.filter((l) => l.covered).length
+    const totalLines = lines.length
+    const branchesCovered = lines.reduce((sum, l) => sum + l.branchesCovered, 0)
+    const totalBranches = lines.reduce((sum, l) => sum + l.totalBranches, 0)
     return {
-      covered: branchLines.length - partialLines.length,
-      total: branchLines.length,
+      linesCovered,
+      totalLines,
+      branchesCovered,
+      totalBranches,
+      lineCoverage: totalLines > 0 ? linesCovered / totalLines : 0,
+      branchCoverage: totalBranches > 0 ? branchesCovered / totalBranches : undefined
     }
   }
 
-  private mergeBranchMetrics(
-    a: CoverageMetrics | undefined,
-    b: CoverageMetrics | undefined,
-  ): CoverageMetrics | undefined {
-    if (!a && !b) return undefined
-    if (!a) return b
-    if (!b) return a
-    return {
-      covered: a.covered + b.covered,
-      total: a.total + b.total,
-    }
+  public static calculateFileCoverage(files: FileCoverage[]): PercentageCoverageMetrics {
+    const lines = files.flatMap(x => x.lines)
+    return CoberturaCoverageParser.calculateCoverage(lines)
+  }
+
+  public static calculatePackageCoverage(packages: PackageCoverage[]): PercentageCoverageMetrics {
+    const lines = packages.flatMap(x => x.files.flatMap(xx => xx.lines))
+    return CoberturaCoverageParser.calculateCoverage(lines)
   }
 }

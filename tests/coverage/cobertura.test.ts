@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { CoberturaCoverageParser } from '../../src/coverage/index.js'
+import {CoberturaCoverageParser, LineCoverage} from '../../src/coverage/index.js'
 
 const RESOURCES_DIR = path.join(__dirname, '../resources/cobertura')
 
@@ -24,11 +24,10 @@ describe('CoberturaCoverageParser', () => {
       const file = report.packages[0]!.files[0]!
       expect(file.filename).toBe('src/minimal.ts')
       expect(file.lines).toHaveLength(1)
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' })
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 })
 
       // Metrics
-      expect(file.lineMetrics).toEqual({ covered: 1, total: 1 })
-      expect(file.branchMetrics).toEqual({ covered: 1, total: 1 })
+      expect(file.coverage).toEqual({ linesCovered: 1, totalLines: 1, branchesCovered: 0, totalBranches: 0, lineCoverage: 1, branchCoverage: undefined })
     })
 
     it('parses multiple packages', async () => {
@@ -42,27 +41,24 @@ describe('CoberturaCoverageParser', () => {
 
       // Package one: all lines covered
       const pkg1File = report.packages[0]!.files[0]!
-      expect(pkg1File.lines).toEqual([
-        { lineNumber: 1, state: 'covered' },
-        { lineNumber: 2, state: 'covered' },
+      expect(pkg1File.lines).toEqual<LineCoverage[]>([
+        { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+        { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 }
       ])
-      expect(pkg1File.lineMetrics).toEqual({ covered: 2, total: 2 })
-      expect(pkg1File.branchMetrics).toEqual({ covered: 2, total: 2 })
+      expect(pkg1File.coverage).toEqual({ linesCovered: 2, totalLines: 2, branchesCovered: 0, totalBranches: 0, lineCoverage: 1, branchCoverage: undefined })
 
       // Package two: mixed coverage
       const pkg2File = report.packages[1]!.files[0]!
-      expect(pkg2File.lines).toEqual([
-        { lineNumber: 1, state: 'covered' },
-        { lineNumber: 2, state: 'not-covered' },
+      expect(pkg2File.lines).toEqual<LineCoverage[]>([
+        { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+        { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
       ])
-      expect(pkg2File.lineMetrics).toEqual({ covered: 1, total: 2 })
-      expect(pkg2File.branchMetrics).toEqual({ covered: 1, total: 1 })
+      expect(pkg2File.coverage).toEqual({ linesCovered: 1, totalLines: 2, branchesCovered: 0, totalBranches: 0, lineCoverage: 0.5, branchCoverage: undefined })
 
       // Package three: nothing covered
       const pkg3File = report.packages[2]!.files[0]!
-      expect(pkg3File.lines).toEqual([{ lineNumber: 1, state: 'not-covered' }])
-      expect(pkg3File.lineMetrics).toEqual({ covered: 0, total: 1 })
-      expect(pkg3File.branchMetrics).toBeUndefined()
+      expect(pkg3File.lines).toEqual<LineCoverage[]>([{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }])
+      expect(pkg3File.coverage).toEqual({ linesCovered: 0, totalLines: 1, branchesCovered: 0, totalBranches: 0, lineCoverage: 0, branchCoverage: undefined })
     })
 
     it('parses multiple classes per package', async () => {
@@ -72,20 +68,15 @@ describe('CoberturaCoverageParser', () => {
       expect(report.packages).toHaveLength(1)
       expect(report.packages[0]!.files).toHaveLength(3)
 
-      const files = report.packages[0]!.files
-      expect(files[0]!.filename).toBe('src/first.ts')
-      expect(files[1]!.filename).toBe('src/second.ts')
-      expect(files[2]!.filename).toBe('src/third.ts')
+      const files = report.packages[0]!.files!
+      expect(files[0]?.filename).toBe('src/first.ts')
+      expect(files[1]?.filename).toBe('src/second.ts')
+      expect(files[2]?.filename).toBe('src/third.ts')
 
       // Verify metrics per file
-      expect(files[0]!.lineMetrics).toEqual({ covered: 2, total: 2 })
-      expect(files[0]!.branchMetrics).toEqual({ covered: 2, total: 2 })
-
-      expect(files[1]!.lineMetrics).toEqual({ covered: 1, total: 2 })
-      expect(files[1]!.branchMetrics).toEqual({ covered: 1, total: 1 })
-
-      expect(files[2]!.lineMetrics).toEqual({ covered: 1, total: 2 })
-      expect(files[2]!.branchMetrics).toEqual({ covered: 1, total: 1 })
+      expect(files[0]?.coverage).toEqual({ linesCovered: 2, totalLines: 2, branchesCovered: 0, totalBranches: 0, lineCoverage: 1, branchCoverage: undefined })
+      expect(files[1]?.coverage).toEqual({ linesCovered: 1, totalLines: 2, branchesCovered: 0, totalBranches: 0, lineCoverage: 0.5, branchCoverage: undefined })
+      expect(files[2]?.coverage).toEqual({ linesCovered: 1, totalLines: 2, branchesCovered: 0, totalBranches: 0, lineCoverage: 0.5, branchCoverage: undefined })
     })
 
     it('parses multiple lines with different states and calculates metrics', async () => {
@@ -94,15 +85,13 @@ describe('CoberturaCoverageParser', () => {
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(5)
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' })
-      expect(file.lines[1]).toEqual({ lineNumber: 2, state: 'covered' })
-      expect(file.lines[2]).toEqual({ lineNumber: 3, state: 'not-covered' })
-      expect(file.lines[3]).toEqual({ lineNumber: 4, state: 'covered' }) // 100% branch
-      expect(file.lines[4]).toEqual({ lineNumber: 5, state: 'not-covered' })
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[3]).toEqual<LineCoverage>({ lineNumber: 4, covered: true, branchesCovered: 2, totalBranches: 2 })
+      expect(file.lines[4]).toEqual<LineCoverage>({ lineNumber: 5, covered: false, branchesCovered: 0, totalBranches: 0 })
 
-      // Line metrics: 3 covered (1, 2, 4), 2 not covered (3, 5)
-      expect(file.lineMetrics).toEqual({ covered: 3, total: 5 })
-      expect(file.branchMetrics).toEqual({ covered: 3, total: 3 })
+      expect(file.coverage).toEqual({ linesCovered: 3, totalLines: 5, branchesCovered: 2, totalBranches: 2, lineCoverage: 0.6, branchCoverage: 1 })
     })
 
     it('handles single elements (not arrays)', async () => {
@@ -114,9 +103,8 @@ describe('CoberturaCoverageParser', () => {
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(1)
-      expect(file.lines[0]!.lineNumber).toBe(42)
-      expect(file.lineMetrics).toEqual({ covered: 1, total: 1 })
-      expect(file.branchMetrics).toEqual({ covered: 1, total: 1 })
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 42, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.coverage).toEqual({ linesCovered: 1, totalLines: 1, branchesCovered: 0, totalBranches: 0, lineCoverage: 1, branchCoverage: undefined })
     })
   })
 
@@ -152,8 +140,7 @@ describe('CoberturaCoverageParser', () => {
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(0)
-      expect(file.lineMetrics).toEqual({ covered: 0, total: 0 })
-      expect(file.branchMetrics).toBeUndefined()
+      expect(file.coverage).toEqual({ linesCovered: 0, totalLines: 0, branchesCovered: 0, totalBranches: 0, lineCoverage: 0, branchCoverage: undefined })
     })
   })
 
@@ -163,14 +150,12 @@ describe('CoberturaCoverageParser', () => {
       const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' }) // No branch
-      expect(file.lines[1]).toEqual({ lineNumber: 2, state: 'covered' }) // 100% branch
-      expect(file.lines[2]).toEqual({ lineNumber: 3, state: 'covered' }) // 100% branch
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }) // No branch
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 2, totalBranches: 2 }) // 100% branch
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 4, totalBranches: 4 }) // 100% branch
 
       // All lines covered
-      expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
-      // Branch metrics: all branches fully covered (no partial)
-      expect(file.branchMetrics).toEqual({ covered: 3, total: 3 })
+      expect(file.coverage).toEqual({ linesCovered: 3, totalLines: 3, branchesCovered: 6, totalBranches: 6, lineCoverage: 1, branchCoverage: 1 })
     })
 
     it('marks partial branch coverage as partial with correct metrics', async () => {
@@ -178,14 +163,12 @@ describe('CoberturaCoverageParser', () => {
       const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' }) // No branch
-      expect(file.lines[1]).toEqual({ lineNumber: 2, state: 'partial' }) // 50% branch
-      expect(file.lines[2]).toEqual({ lineNumber: 3, state: 'partial' }) // 25% branch
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }) // No branch
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 1, totalBranches: 2 }) // 50% branch
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 1, totalBranches: 4 }) // 25% branch
 
       // Line metrics: partial counts as covered
-      expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
-      // Branch metrics: 1 covered (line 1), 2 partial (lines 2, 3) -> covered=1, total=3
-      expect(file.branchMetrics).toEqual({ covered: 1, total: 3 })
+      expect(file.coverage).toEqual({ linesCovered: 3, totalLines: 3, branchesCovered: 2, totalBranches: 6, lineCoverage: 1, branchCoverage: 2 / 6 })
     })
 
     it('handles lines without branches', async () => {
@@ -193,12 +176,11 @@ describe('CoberturaCoverageParser', () => {
       const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' })
-      expect(file.lines[1]).toEqual({ lineNumber: 2, state: 'covered' })
-      expect(file.lines[2]).toEqual({ lineNumber: 3, state: 'not-covered' })
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 0 })
 
-      expect(file.lineMetrics).toEqual({ covered: 2, total: 3 })
-      expect(file.branchMetrics).toEqual({ covered: 2, total: 2 })
+      expect(file.coverage).toEqual({ linesCovered: 2, totalLines: 3, branchesCovered: 0, totalBranches: 0, lineCoverage: 2 / 3, branchCoverage: undefined })
     })
 
     it('handles lowercase branch="true"', async () => {
@@ -206,13 +188,11 @@ describe('CoberturaCoverageParser', () => {
       const report = await parser.parse(content, undefined)
 
       const file = report.packages[0]!.files[0]!
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' }) // branch="false"
-      expect(file.lines[1]).toEqual({ lineNumber: 2, state: 'covered' }) // 100% branch
-      expect(file.lines[2]).toEqual({ lineNumber: 3, state: 'partial' }) // 50% branch
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }) // branch="false"
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 2, totalBranches: 2 }) // 100% branch
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 1, totalBranches: 2 }) // 50% branch
 
-      expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
-      // 2 covered (lines 1, 2), 1 partial (line 3) -> covered=2, total=3
-      expect(file.branchMetrics).toEqual({ covered: 2, total: 3 })
+      expect(file.coverage).toEqual({ linesCovered: 3, totalLines: 3, branchesCovered: 3, totalBranches: 4, lineCoverage: 1, branchCoverage: 3 / 4 })
     })
 
     it('processes mixed branch scenarios with correct metrics', async () => {
@@ -221,16 +201,14 @@ describe('CoberturaCoverageParser', () => {
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(5)
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' }) // No branch, hits > 0
-      expect(file.lines[1]).toEqual({ lineNumber: 2, state: 'covered' }) // 100% branch
-      expect(file.lines[2]).toEqual({ lineNumber: 3, state: 'partial' }) // 50% branch
-      expect(file.lines[3]).toEqual({ lineNumber: 4, state: 'not-covered' }) // 0 hits
-      expect(file.lines[4]).toEqual({ lineNumber: 5, state: 'covered' }) // No branch, hits > 0
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }) // No branch, hits > 0
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 2, totalBranches: 2 }) // 100% branch
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 1, totalBranches: 2 }) // 50% branch
+      expect(file.lines[3]).toEqual<LineCoverage>({ lineNumber: 4, covered: false, branchesCovered: 0, totalBranches: 2 }) // 0 hits, has branch but 0% coverage
+      expect(file.lines[4]).toEqual<LineCoverage>({ lineNumber: 5, covered: true, branchesCovered: 0, totalBranches: 0 }) // No branch, hits > 0
 
       // 4 lines with hits (covered or partial), 1 not covered
-      expect(file.lineMetrics).toEqual({ covered: 4, total: 5 })
-      // 3 covered (lines 1, 2, 5), 1 partial (line 3) -> covered=3, total=4
-      expect(file.branchMetrics).toEqual({ covered: 3, total: 4 })
+      expect(file.coverage).toEqual({ linesCovered: 4, totalLines: 5, branchesCovered: 3, totalBranches: 6, lineCoverage: 0.8, branchCoverage: 3 / 6 })
     })
   })
 
@@ -246,10 +224,14 @@ describe('CoberturaCoverageParser', () => {
       expect(file.filename).toBe('src/shared.ts')
       expect(file.lines).toHaveLength(5)
       expect(file.lines.map((l) => l.lineNumber)).toEqual([1, 2, 3, 10, 11])
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[3]).toEqual<LineCoverage>({ lineNumber: 10, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[4]).toEqual<LineCoverage>({ lineNumber: 11, covered: false, branchesCovered: 0, totalBranches: 0 })
 
       // Merged metrics: 4 covered, 1 not covered (line 11)
-      expect(file.lineMetrics).toEqual({ covered: 4, total: 5 })
-      expect(file.branchMetrics).toEqual({ covered: 4, total: 4 })
+      expect(file.coverage).toEqual({ linesCovered: 4, totalLines: 5, branchesCovered: 0, totalBranches: 0, lineCoverage: 0.8, branchCoverage: undefined })
     })
 
     it('applies correct line merge priority (covered > partial > not-covered)', async () => {
@@ -260,19 +242,12 @@ describe('CoberturaCoverageParser', () => {
       expect(report.packages[0]!.files).toHaveLength(1)
 
       const file = report.packages[0]!.files[0]!
-      // Line 5 appears in all three classes with different states
-      // ClassOne: not-covered, ClassTwo: partial, ClassThree: covered
-      // Should merge to 'covered' (highest priority)
       const line5 = file.lines.find((l) => l.lineNumber === 5)
-      expect(line5).toEqual({ lineNumber: 5, state: 'covered' })
-
-      // Line 1 only in ClassOne as not-covered
+      expect(line5).toEqual<LineCoverage>({ lineNumber: 5, covered: true, branchesCovered: 2, totalBranches: 2 })
       const line1 = file.lines.find((l) => l.lineNumber === 1)
-      expect(line1).toEqual({ lineNumber: 1, state: 'not-covered' })
+      expect(line1).toEqual<LineCoverage>({ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 })
 
-      // 3 covered (lines 5, 10, 15), 1 not-covered (line 1)
-      expect(file.lineMetrics).toEqual({ covered: 3, total: 4 })
-      expect(file.branchMetrics).toBeDefined()
+      expect(file.coverage).toEqual({ linesCovered: 3, totalLines: 4, branchesCovered: 2, totalBranches: 2, lineCoverage: 0.75, branchCoverage: 1 })
     })
   })
 
@@ -283,13 +258,13 @@ describe('CoberturaCoverageParser', () => {
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(5)
-      file.lines.forEach((line) => {
-        expect(line.state).toBe('not-covered')
-      })
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: false, branchesCovered: 0, totalBranches: 2 })
+      expect(file.lines[3]).toEqual<LineCoverage>({ lineNumber: 4, covered: false, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[4]).toEqual<LineCoverage>({ lineNumber: 5, covered: false, branchesCovered: 0, totalBranches: 0 })
 
-      expect(file.lineMetrics).toEqual({ covered: 0, total: 5 })
-      // No covered/partial lines, so no branch metrics
-      expect(file.branchMetrics).toBeUndefined()
+      expect(file.coverage).toEqual({ linesCovered: 0, totalLines: 5, branchesCovered: 0, totalBranches: 2, lineCoverage: 0, branchCoverage: 0 })
     })
 
     it('handles high hit counts', async () => {
@@ -298,12 +273,11 @@ describe('CoberturaCoverageParser', () => {
 
       const file = report.packages[0]!.files[0]!
       expect(file.lines).toHaveLength(3)
-      file.lines.forEach((line) => {
-        expect(line.state).toBe('covered')
-      })
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 2, totalBranches: 2 })
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 })
 
-      expect(file.lineMetrics).toEqual({ covered: 3, total: 3 })
-      expect(file.branchMetrics).toEqual({ covered: 3, total: 3 })
+      expect(file.coverage).toEqual({ linesCovered: 3, totalLines: 3, branchesCovered: 2, totalBranches: 2, lineCoverage: 1, branchCoverage: 1 })
     })
 
     it('handles various condition-coverage formats', async () => {
@@ -314,22 +288,20 @@ describe('CoberturaCoverageParser', () => {
       expect(file.lines).toHaveLength(6)
 
       // 100% (2/2) -> covered
-      expect(file.lines[0]).toEqual({ lineNumber: 1, state: 'covered' })
-      // 50% (1/2) -> partial
-      expect(file.lines[1]).toEqual({ lineNumber: 2, state: 'partial' })
-      // 0% (0/2) -> partial (has hits, but not all branches)
-      expect(file.lines[2]).toEqual({ lineNumber: 3, state: 'partial' })
-      // 75% (3/4) -> partial
-      expect(file.lines[3]).toEqual({ lineNumber: 4, state: 'partial' })
-      // 33% (2/6) -> partial
-      expect(file.lines[4]).toEqual({ lineNumber: 5, state: 'partial' })
-      // 1% (1/100) -> partial
-      expect(file.lines[5]).toEqual({ lineNumber: 6, state: 'partial' })
+      expect(file.lines[0]).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 2, totalBranches: 2 })
+      // 50% (1/2) -> covered (has hits, but partial branch)
+      expect(file.lines[1]).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 1, totalBranches: 2 })
+      // 0% (0/2) -> covered (has hits, but no branches covered)
+      expect(file.lines[2]).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 2 })
+      // 75% (3/4) -> covered (has hits, but partial branch)
+      expect(file.lines[3]).toEqual<LineCoverage>({ lineNumber: 4, covered: true, branchesCovered: 3, totalBranches: 4 })
+      // 33% (2/6) -> covered (has hits, but partial branch)
+      expect(file.lines[4]).toEqual<LineCoverage>({ lineNumber: 5, covered: true, branchesCovered: 2, totalBranches: 6 })
+      // 1% (1/100) -> covered (has hits, but partial branch)
+      expect(file.lines[5]).toEqual<LineCoverage>({ lineNumber: 6, covered: true, branchesCovered: 1, totalBranches: 100 })
 
       // All lines have hits, all count as covered for line metrics
-      expect(file.lineMetrics).toEqual({ covered: 6, total: 6 })
-      // 1 covered (line 1), 5 partial -> covered=1, total=6
-      expect(file.branchMetrics).toEqual({ covered: 1, total: 6 })
+      expect(file.coverage).toEqual({ linesCovered: 6, totalLines: 6, branchesCovered: 9, totalBranches: 116, lineCoverage: 1, branchCoverage: 9 / 116 })
     })
   })
 
@@ -363,27 +335,29 @@ describe('CoberturaCoverageParser', () => {
       expect(report.packages).toHaveLength(1)
       const file = report.packages[0]!.files[0]!
 
-      // 10 lines total:
+      // 13 lines total:
       // - Lines 1, 2, 3: covered (hits > 0, no branch)
       // - Line 4: covered (100% branch)
-      // - Lines 5, 6: partial (branch with < 100%)
+      // - Lines 5, 6: covered (branch with < 100%)
       // - Lines 7, 8, 9: not covered (hits = 0)
       // - Line 10: not covered (hits = 0, even with branch)
-      expect(file.lines).toHaveLength(10)
+      // - Line 11: covered (hits > 0, no branch)
+      // - Lines 15, 16: not covered (hits = 0)
+      expect(file.lines).toHaveLength(13)
 
-      // Verify individual line states
-      expect(file.lines.find((l) => l.lineNumber === 1)!.state).toBe('covered')
-      expect(file.lines.find((l) => l.lineNumber === 4)!.state).toBe('covered')
-      expect(file.lines.find((l) => l.lineNumber === 5)!.state).toBe('partial')
-      expect(file.lines.find((l) => l.lineNumber === 6)!.state).toBe('partial')
-      expect(file.lines.find((l) => l.lineNumber === 7)!.state).toBe('not-covered')
-      expect(file.lines.find((l) => l.lineNumber === 10)!.state).toBe('not-covered')
+      // Verify individual line coverage
+      expect(file.lines.find((l) => l.lineNumber === 1)).toEqual<LineCoverage>({ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines.find((l) => l.lineNumber === 2)).toEqual<LineCoverage>({ lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines.find((l) => l.lineNumber === 3)).toEqual<LineCoverage>({ lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines.find((l) => l.lineNumber === 4)).toEqual<LineCoverage>({ lineNumber: 4, covered: true, branchesCovered: 2, totalBranches: 2 })
+      expect(file.lines.find((l) => l.lineNumber === 5)).toEqual<LineCoverage>({ lineNumber: 5, covered: true, branchesCovered: 1, totalBranches: 2 })
+      expect(file.lines.find((l) => l.lineNumber === 6)).toEqual<LineCoverage>({ lineNumber: 6, covered: true, branchesCovered: 3, totalBranches: 4 })
+      expect(file.lines.find((l) => l.lineNumber === 7)).toEqual<LineCoverage>({ lineNumber: 7, covered: false, branchesCovered: 0, totalBranches: 0 })
+      expect(file.lines.find((l) => l.lineNumber === 10)).toEqual<LineCoverage>({ lineNumber: 10, covered: false, branchesCovered: 0, totalBranches: 2 })
+      expect(file.lines.find((l) => l.lineNumber === 11)).toEqual<LineCoverage>({ lineNumber: 11, covered: true, branchesCovered: 0, totalBranches: 0 })
 
-      // Line metrics: covered + partial = 6, not covered = 4
-      expect(file.lineMetrics).toEqual({ covered: 6, total: 10 })
-
-      // Branch metrics: 4 covered (lines 1,2,3,4), 2 partial (lines 5,6) -> covered=4, total=6
-      expect(file.branchMetrics).toEqual({ covered: 4, total: 6 })
+      // Line metrics: covered = 7, not covered = 6
+      expect(file.coverage).toEqual({ linesCovered: 7, totalLines: 13, branchesCovered: 6, totalBranches: 10, lineCoverage: 7 / 13, branchCoverage: 6 / 10 })
 
       // Method metrics are not currently parsed by the parser
     })

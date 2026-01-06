@@ -17,27 +17,56 @@ describe('filterByGlob', () => {
           filename: 'src/utils/helper.ts',
           resolvedPath: '/repo/src/utils/helper.ts',
           lines: [
-            { lineNumber: 1, state: 'covered' },
-            { lineNumber: 2, state: 'not-covered' },
+            { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+            { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
           ],
-          lineMetrics: { covered: 1, total: 2 },
+          coverage: {
+            linesCovered: 1,
+            totalLines: 2,
+            branchesCovered: 0,
+            totalBranches: 0,
+            lineCoverage: 0.5,
+            branchCoverage: undefined,
+          },
         },
         {
           filename: 'src/components/Button.tsx',
           resolvedPath: '/repo/src/components/Button.tsx',
           lines: [
-            { lineNumber: 1, state: 'covered' },
-            { lineNumber: 2, state: 'covered' },
+            { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+            { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 },
           ],
-          lineMetrics: { covered: 2, total: 2 },
+          coverage: {
+            linesCovered: 2,
+            totalLines: 2,
+            branchesCovered: 0,
+            totalBranches: 0,
+            lineCoverage: 1,
+            branchCoverage: undefined,
+          },
         },
         {
           filename: 'tests/helper.test.ts',
           resolvedPath: '/repo/tests/helper.test.ts',
-          lines: [{ lineNumber: 1, state: 'covered' }],
-          lineMetrics: { covered: 1, total: 1 },
+          lines: [{ lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 }],
+          coverage: {
+            linesCovered: 1,
+            totalLines: 1,
+            branchesCovered: 0,
+            totalBranches: 0,
+            lineCoverage: 1,
+            branchCoverage: undefined,
+          },
         },
       ],
+      coverage: {
+        linesCovered: 3,
+        totalLines: 4,
+        branchesCovered: 0,
+        totalBranches: 0,
+        lineCoverage: 3 / 4,
+        branchCoverage: undefined,
+      },
     },
     {
       name: 'Package2',
@@ -45,10 +74,25 @@ describe('filterByGlob', () => {
         {
           filename: 'lib/index.js',
           resolvedPath: '/repo/lib/index.js',
-          lines: [{ lineNumber: 1, state: 'not-covered' }],
-          lineMetrics: { covered: 0, total: 1 },
+          lines: [{ lineNumber: 1, covered: false, branchesCovered: 0, totalBranches: 0 }],
+          coverage: {
+            linesCovered: 0,
+            totalLines: 1,
+            branchesCovered: 0,
+            totalBranches: 0,
+            lineCoverage: 0,
+            branchCoverage: undefined,
+          },
         },
       ],
+      coverage: {
+        linesCovered: 0,
+        totalLines: 1,
+        branchesCovered: 0,
+        totalBranches: 0,
+        lineCoverage: 0,
+        branchCoverage: undefined,
+      },
     },
   ]
 
@@ -101,25 +145,46 @@ describe('filterByChangedLines', () => {
           filename: 'src/file1.ts',
           resolvedPath: '/repo/src/file1.ts',
           lines: [
-            { lineNumber: 1, state: 'covered' },
-            { lineNumber: 2, state: 'not-covered' },
-            { lineNumber: 3, state: 'covered' },
-            { lineNumber: 4, state: 'partial' },
-            { lineNumber: 5, state: 'covered' },
+            { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+            { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
+            { lineNumber: 3, covered: true, branchesCovered: 0, totalBranches: 0 },
+            { lineNumber: 4, covered: true, branchesCovered: 1, totalBranches: 2 },
+            { lineNumber: 5, covered: true, branchesCovered: 0, totalBranches: 0 },
           ],
-          lineMetrics: { covered: 3, total: 5 },
-          branchMetrics: { covered: 1, total: 2 },
+          coverage: {
+            linesCovered: 4,
+            totalLines: 5,
+            branchesCovered: 1,
+            totalBranches: 2,
+            lineCoverage: 0.8,
+            branchCoverage: 0.5,
+          },
         },
         {
           filename: 'src/file2.ts',
           resolvedPath: '/repo/src/file2.ts',
           lines: [
-            { lineNumber: 1, state: 'covered' },
-            { lineNumber: 2, state: 'covered' },
+            { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+            { lineNumber: 2, covered: true, branchesCovered: 0, totalBranches: 0 },
           ],
-          lineMetrics: { covered: 2, total: 2 },
+          coverage: {
+            linesCovered: 2,
+            totalLines: 2,
+            branchesCovered: 0,
+            totalBranches: 0,
+            lineCoverage: 1,
+            branchCoverage: undefined,
+          },
         },
       ],
+      coverage: {
+        linesCovered: 6,
+        totalLines: 7,
+        branchesCovered: 1,
+        totalBranches: 2,
+        lineCoverage: 6 / 7,
+        branchCoverage: 0.5,
+      },
     },
   ]
 
@@ -145,8 +210,8 @@ describe('filterByChangedLines', () => {
 
     const file = result[0]?.files[0]
     assert(file)
-    expect(file.lineMetrics.covered).toBe(2) // lines 1 and 3 are covered
-    expect(file.lineMetrics.total).toBe(3) // 3 lines total
+    expect(file.coverage.linesCovered).toBe(2) // lines 1 and 3 are covered
+    expect(file.coverage.totalLines).toBe(3) // 3 lines total
   })
 
   it('preserves branch metrics from original file', () => {
@@ -156,7 +221,8 @@ describe('filterByChangedLines', () => {
 
     const file = result[0]?.files[0]
     assert(file)
-    expect(file.branchMetrics).toEqual({ covered: 1, total: 2 })
+    expect(file.coverage.branchesCovered).toBe(0) // line 1 has no branches, line 2 has no branches
+    expect(file.coverage.totalBranches).toBe(0) // no branches in filtered lines
   })
 
   it('excludes files with no changed lines info', () => {
@@ -204,12 +270,27 @@ describe('filterByChangedLines', () => {
             filename: 'src/no-path.ts',
             // No resolvedPath
             lines: [
-              { lineNumber: 1, state: 'covered' },
-              { lineNumber: 2, state: 'not-covered' },
+              { lineNumber: 1, covered: true, branchesCovered: 0, totalBranches: 0 },
+              { lineNumber: 2, covered: false, branchesCovered: 0, totalBranches: 0 },
             ],
-            lineMetrics: { covered: 1, total: 2 },
+            coverage: {
+              linesCovered: 1,
+              totalLines: 2,
+              branchesCovered: 0,
+              totalBranches: 0,
+              lineCoverage: 0.5,
+              branchCoverage: undefined,
+            },
           },
         ],
+        coverage: {
+          linesCovered: 1,
+          totalLines: 2,
+          branchesCovered: 0,
+          totalBranches: 0,
+          lineCoverage: 0.5,
+          branchCoverage: undefined,
+        },
       },
     ]
 

@@ -2,14 +2,10 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import {
   CoberturaCoverageParser,
-  type CoverageMetrics,
   type CoverageReport,
   type FileCoverage,
-  type LineCoverage,
-  type LineCoverageState,
   type PackageCoverage,
 } from '../coverage/index.js'
-import type { PercentageCoverageMetrics } from '../coverage/model.js'
 import { type ChangedLinesMap, filterByChangedLines, filterByGlob, getChangedLinesFromGit } from '../filter/index.js'
 import { generateMarkdown } from '../markdown/index.js'
 
@@ -119,7 +115,7 @@ export async function processCoverage(
   }
 
   const totalFiles = reports.reduce((s1, r) => s1 + r.packages.reduce((s2, p) => s2 + p.files.length, 0), 0)
-  logger.info(`Found coverage data in ${reports.length} for ${totalFiles} files total`)
+  logger.info(`Found coverage data in ${reports.length} reports for ${totalFiles} files total`)
   // Merge all reports into one (including sources)
   const mergedPackages = await mergeReportAndResolveSources(reports, inputs.sourceDir, logger)
 
@@ -154,8 +150,8 @@ export async function processCoverage(
     }
   }
 
-  const overallMetrics = calculateOverallMetrics(mergedPackages)
-  const prMetrics = calculateOverallMetrics(filteredPackages)
+  const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(mergedPackages)
+  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(filteredPackages)
   logger.info(
     `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
   )
@@ -187,46 +183,6 @@ async function firstExistingDirectory(paths: readonly string[]): Promise<string 
     }
   }
   return undefined
-}
-
-/** Priority order for restrictive merging: lower = worse (takes precedence) */
-const statePriority: Record<LineCoverageState, number> = {
-  'not-covered': 0,
-  partial: 1,
-  covered: 2,
-}
-
-/**
- * Merge two FileCoverage objects using restrictive line state merging.
- * For lines present in both: take the "worst" state (not-covered > partial > covered).
- * For lines present in only one: use that state.
- */
-function mergeFileCoverage(existing: FileCoverage, incoming: FileCoverage): FileCoverage {
-  const worse = (a: LineCoverage, b: LineCoverage) => (statePriority[a.state] <= statePriority[b.state] ? a : b)
-
-  const linesByNumber = new Map<number, LineCoverage>()
-
-  // seed with existing
-  for (const l of existing.lines) linesByNumber.set(l.lineNumber, l)
-
-  // merge incoming
-  for (const l of incoming.lines) {
-    const prev = linesByNumber.get(l.lineNumber)
-    linesByNumber.set(l.lineNumber, prev ? worse(prev, l) : l)
-  }
-
-  const lines = [...linesByNumber.values()].sort((a, b) => a.lineNumber - b.lineNumber)
-  const lineMetrics = { covered: lines.reduce((n, l) => n + (l.state === 'covered' ? 1 : 0), 0), total: lines.length }
-
-  const sumMetrics = (a?: CoverageMetrics, b?: CoverageMetrics): CoverageMetrics | undefined =>
-    a && b ? ({ covered: a.covered + b.covered, total: a.total + b.total } as CoverageMetrics) : (a ?? b)
-
-  return {
-    ...existing,
-    lines,
-    lineMetrics,
-    branchMetrics: sumMetrics(existing.branchMetrics, incoming.branchMetrics),
-  }
 }
 
 /**
@@ -261,9 +217,9 @@ async function mergeReportAndResolveSources(
       // Add files with resolved paths (merge duplicates)
       for (const file of pkg.files) {
         const resolvedPath = path.resolve(source, file.filename)
-        if (fileMap.has(resolvedPath)) {
-          const existing = fileMap.get(resolvedPath)!
-          const merged = mergeFileCoverage(existing, { resolvedPath, ...file })
+        const existing = fileMap.get(resolvedPath)
+        if (existing) {
+          const merged = CoberturaCoverageParser.merge(existing, file.lines)
           fileMap.set(resolvedPath, merged)
           logger.debug?.(`Merged duplicate file: ${file.filename}`)
         } else {
@@ -274,41 +230,18 @@ async function mergeReportAndResolveSources(
   }
 
   // Convert file maps back to arrays for the final report
-  const packages: PackageCoverage[] = Array.from(packageMap.values()).map(({ name, fileMap }) => ({
-    name,
-    files: Array.from(fileMap.values()),
-  }))
+  const packages: PackageCoverage[] = Array.from(packageMap.values()).map(({ name, fileMap }) => {
+    const files = Array.from(fileMap.values())
+    return {
+      name,
+      files,
+      coverage: CoberturaCoverageParser.calculateFileCoverage(files),
+    }
+  })
 
   const totalFiles = packages.reduce((sum, pkg) => sum + pkg.files.length, 0)
   logger.info(`Merged coverage data for ${totalFiles} distinct files`)
   return packages
-}
-
-/**
- * Calculate overall coverage metrics from a merged packages.
- */
-function calculateOverallMetrics(packages: PackageCoverage[]): PercentageCoverageMetrics {
-  let lineCovered = 0
-  let lineTotal = 0
-  let branchCovered = 0
-  let branchTotal = 0
-
-  for (const pkg of packages) {
-    for (const file of pkg.files) {
-      lineCovered += file.lineMetrics.covered
-      lineTotal += file.lineMetrics.total
-
-      if (file.branchMetrics) {
-        branchCovered += file.branchMetrics.covered
-        branchTotal += file.branchMetrics.total
-      }
-    }
-  }
-
-  return {
-    lineCoverage: lineTotal > 0 ? (lineCovered / lineTotal) * 100 : 0,
-    branchCoverage: branchTotal > 0 ? (branchCovered / branchTotal) * 100 : 0,
-  }
 }
 
 /**

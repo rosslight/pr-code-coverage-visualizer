@@ -1,14 +1,14 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-70%25-green.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-70%25-green.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-66.67%25-green.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n%2Fa-brightgreen.svg?style=flat)
 
 ---
 
 ## PR Coverage
-<b>3/4</b> changed lines covered (Lines: <b>75%</b>, Branches: <b>n/a</b>)
+<b>2/3</b> changed lines covered (Lines: <b>66.67%</b>, Branches: <b>n/a</b>)
 
 ### TestPackage
 <details>
-<summary>🔴 <b>src/test.ts</b> — <b>3/4</b> changed lines covered (Lines: <b>75%</b>, Branches: <b>n/a</b>)</summary>
+<summary>🔴 <b>src/test.ts</b> — <b>2/3</b> changed lines covered (Lines: <b>66.67%</b>, Branches: <b>n/a</b>)</summary>
 
 ```typescript
   1 ⬛ some content in line 1

@@ -1,14 +1,14 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-50%25-yellowgreen.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-50%25-yellowgreen.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-100%25-brightgreen.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n%2Fa-brightgreen.svg?style=flat)
 
 ---
 
 ## PR Coverage
-<b>0/3</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>0%</b>)
+<b>3/3</b> changed lines covered (Lines: <b>100%</b>, Branches: <b>0%</b>)
 
 ### HighPartial
 <details>
-<summary>🟠 <b>high.ts</b> — <b>0/2</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>0%</b>)</summary>
+<summary>🟠 <b>high.ts</b> — <b>2/2</b> changed lines covered (Lines: <b>100%</b>, Branches: <b>0%</b>)</summary>
 
 ```typescript
   1 🟨 some content in line 1
@@ -19,7 +19,7 @@
 
 ### LowPartial
 <details>
-<summary>🟠 <b>low.ts</b> — <b>0/1</b> changed lines covered (Lines: <b>0%</b>, Branches: <b>0%</b>)</summary>
+<summary>🟠 <b>low.ts</b> — <b>1/1</b> changed lines covered (Lines: <b>100%</b>, Branches: <b>0%</b>)</summary>
 
 ```typescript
   1 🟨 some content in line 1

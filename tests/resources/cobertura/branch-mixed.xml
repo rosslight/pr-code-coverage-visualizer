@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<coverage line-rate="0.8" branch-rate="0.5" lines-covered="4" lines-valid="5" branches-covered="2" branches-valid="4">
+<coverage line-rate="0.8" branch-rate="0.5" lines-covered="4" lines-valid="5" branches-covered="3" branches-valid="6">
   <packages>
     <package name="branch.mixed" line-rate="0.8" branch-rate="0.5" complexity="3">
       <classes>

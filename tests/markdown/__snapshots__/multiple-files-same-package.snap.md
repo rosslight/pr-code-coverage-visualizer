@@ -1,5 +1,5 @@
 ## Repo Coverage
-![Line Coverage](https://img.shields.io/badge/Line%20Coverage-10%25-red.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-10%25-red.svg?style=flat)
+![Line Coverage](https://img.shields.io/badge/Line%20Coverage-60%25-green.svg?style=flat) ![Branch Coverage](https://img.shields.io/badge/Branch%20Coverage-n%2Fa-brightgreen.svg?style=flat)
 
 ---
 
@@ -14,6 +14,8 @@
   1 🟥 some content in line 1
   2 🟥 some content in line 2
   3 🟨 some content in line 3
+  4 ⬛ some content in line 4
+...
 ```
 </details>
 ✓ 🟢 <b>src/file1.py</b> — <b>2/2</b> changed lines covered<br>

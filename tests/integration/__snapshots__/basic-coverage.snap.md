@@ -6,16 +6,16 @@
 ## PR Coverage
 <b>3/4</b> changed lines covered (Lines: <b>75%</b>, Branches: <b>n/a</b>)
 
-### TestPackage
+### app
 <details>
-<summary>🔴 <b>src/test.ts</b> — <b>4/5</b> changed lines covered (Lines: <b>80%</b>, Branches: <b>n/a</b>)</summary>
+<summary>🔴 <b>src/calculator.ts</b> — <b>3/4</b> changed lines covered (Lines: <b>75%</b>, Branches: <b>n/a</b>)</summary>
 
 ```typescript
-  1 🟩 some content in line 1
-  2 🟩 some content in line 2
-  3 🟥 some content in line 3
-  4 🟩 some content in line 4
-  5 ⬛ some content in line 5
+  1 🟩 export function add(a: number, b: number): number {
+  2 🟩   return a + b
+  3 🟥 }
+  4 🟩 export function unused() {
+...
 ```
 </details>
 

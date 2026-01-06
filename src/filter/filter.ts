@@ -1,5 +1,6 @@
 import * as path from 'node:path'
 import type { Logger } from '../core/index.js'
+import { CoberturaCoverageParser } from '../coverage/index.js'
 import type { FileCoverage, PackageCoverage } from '../coverage/model.js'
 import type { ChangedLinesMap } from './model.js'
 
@@ -11,14 +12,18 @@ export function filterByGlob(packages: PackageCoverage[], pattern: string, logge
   const totalFilesBefore = packages.reduce((sum, pkg) => sum + pkg.files.length, 0)
 
   const filteredPackages = packages
-    .map((pkg) => ({
-      name: pkg.name,
-      files: pkg.files.filter((file) => {
+    .map((pkg) => {
+      const files = pkg.files.filter((file) => {
         const filePath = file.resolvedPath ?? file.filename
         logger.debug?.(`Filtering '${filePath}' against glob '${effectivePattern}'`)
         return path.matchesGlob(filePath, effectivePattern)
-      }),
-    }))
+      })
+      return {
+        name: pkg.name,
+        files: files,
+        coverage: CoberturaCoverageParser.calculateFileCoverage(files),
+      }
+    })
     .filter((pkg) => pkg.files.length > 0)
 
   const totalFilesAfter = filteredPackages.reduce((sum, pkg) => sum + pkg.files.length, 0)
@@ -42,9 +47,8 @@ export function filterByChangedLines(
   const totalFilesBefore = packages.reduce((sum, pkg) => sum + pkg.files.length, 0)
 
   const filteredPackages = packages
-    .map((pkg) => ({
-      name: pkg.name,
-      files: pkg.files
+    .map((pkg): PackageCoverage => {
+      const files = pkg.files
         .map((file) => {
           // If no resolvedPath, include file without filtering
           if (!file.resolvedPath) {
@@ -52,8 +56,13 @@ export function filterByChangedLines(
           }
           return filterFileLines(file, changedLines.get(file.resolvedPath))
         })
-        .filter((file) => file.lines.length > 0),
-    }))
+        .filter((file) => file.lines.length > 0)
+      return {
+        name: pkg.name,
+        files: files,
+        coverage: CoberturaCoverageParser.calculateFileCoverage(files),
+      }
+    })
     .filter((pkg) => pkg.files.length > 0)
 
   const totalFilesAfter = filteredPackages.reduce((sum, pkg) => sum + pkg.files.length, 0)
@@ -67,15 +76,14 @@ export function filterByChangedLines(
  */
 function filterFileLines(file: FileCoverage, changedLineNumbers: Set<number> | undefined): FileCoverage {
   if (!changedLineNumbers || changedLineNumbers.size === 0) {
-    return { ...file, lines: [], lineMetrics: { covered: 0, total: 0 } }
+    return { ...file, lines: [], coverage: CoberturaCoverageParser.calculateCoverage([]) }
   }
 
   const filteredLines = file.lines.filter((line) => changedLineNumbers.has(line.lineNumber))
-  const coveredCount = filteredLines.filter((line) => line.state === 'covered').length
 
   return {
     ...file,
     lines: filteredLines,
-    lineMetrics: { covered: coveredCount, total: filteredLines.length },
+    coverage: CoberturaCoverageParser.calculateCoverage(filteredLines),
   }
 }

@@ -50,6 +50,10 @@ export type ProcessCoverageInputs = {
   baseSha?: string | undefined
   /** Explicit head commit SHA for comparison */
   headSha?: string | undefined
+  /** Number of lines to show before and after uncovered lines (default: 1) */
+  numberOfSurroundingLines?: number | undefined
+  /** Maximum number of characters in the output (default: 65536, minimum: 900) */
+  maxCharacters?: number | undefined
 }
 
 /**
@@ -155,7 +159,13 @@ export async function processCoverage(
   )
 
   // Generate Markdown from filtered report
-  const markdown = generateMarkdown(fileFilteredPackages, fileContents, overallMetrics, {}, logger)
+  const markdown = generateMarkdown(
+    fileFilteredPackages,
+    fileContents,
+    overallMetrics,
+    { maxCharacters: inputs.maxCharacters, numberOfSurroundingLines: inputs.numberOfSurroundingLines },
+    logger,
+  )
 
   return {
     markdown,

@@ -114,6 +114,7 @@ async function main(): Promise<void> {
       excludePatterns,
       baseSha,
       headSha,
+      maxCharacters: 1_000_000
     },
     cliLogger,
   )

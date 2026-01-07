@@ -27,8 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Generate coverage files
-      - name: 
-        uses: rosslight/pr-code-coverage-visualizer@v1
+      - name: Attach code-coverage comment
+        uses: rosslight/pr-code-coverage-visualizer@v2.2.0
         with:
           files: |
             coverage/coverage1.xml

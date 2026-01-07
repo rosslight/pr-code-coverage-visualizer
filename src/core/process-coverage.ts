@@ -7,7 +7,7 @@ import {
   type FileCoverage,
   type PackageCoverage,
 } from '../coverage/index.js'
-import { type ChangedLinesMap, filterByChangedLines, filterByGlob, getChangedLinesFromGit } from '../filter/index.js'
+import { type ChangedLinesMap, filterByGlob, getChangedLinesFromGit } from '../filter/index.js'
 import { generateMarkdown } from '../markdown/index.js'
 
 /**
@@ -50,9 +50,9 @@ export type ProcessCoverageInputs = {
   baseSha?: string | undefined
   /** Explicit head commit SHA for comparison */
   headSha?: string | undefined
-  /** Number of lines to show before and after uncovered lines (default: 1) */
-  numberOfSurroundingLines?: number | undefined
-  /** Maximum number of characters in the output (default: 65536, minimum: 900) */
+  /** Number of lines to show before and after uncovered lines */
+  numberOfSurroundingLines: number
+  /** Maximum number of characters in the output (minimum: 900) */
   maxCharacters?: number | undefined
 }
 
@@ -138,24 +138,22 @@ export async function processCoverage(
   const globFilteredPackages: PackageCoverage[] = filterByGlob(mergedPackages, inputs.excludePatterns, logger)
   const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages)
   logger.info(
-      `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
+    `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
   )
 
   // Filter git changes
-  const fileFilteredPackages = changedLinesPerFileMap
-    ? filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger)
-    : globFilteredPackages
-  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(fileFilteredPackages)
+  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages, changedLinesPerFileMap)
   logger.info(
-      `Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`,
+    `Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`,
   )
 
   // Read file contents from disk using resolved paths
-  const fileContents = await readFileContents(fileFilteredPackages)
+  const fileContents = await readFileContents(globFilteredPackages, changedLinesPerFileMap)
 
   // Generate Markdown from filtered report
   const markdown = generateMarkdown(
-    fileFilteredPackages,
+    globFilteredPackages,
+    changedLinesPerFileMap,
     fileContents,
     overallMetrics,
     { maxCharacters: inputs.maxCharacters, numberOfSurroundingLines: inputs.numberOfSurroundingLines },
@@ -252,13 +250,21 @@ async function mergeReportAndResolveSources(
  * Files without resolvedPath or that can't be read are skipped.
  *
  * @param packages - Coverage packages with files containing resolvedPath
+ * @param changedLinesMap - The map which contains the lines to render
  */
-async function readFileContents(packages: PackageCoverage[]): Promise<Map<string, string[]>> {
+async function readFileContents(
+  packages: PackageCoverage[],
+  changedLinesMap: ChangedLinesMap | undefined,
+): Promise<Map<string, string[]>> {
   const contents = new Map<string, string[]>()
 
   for (const pkg of packages) {
     for (const file of pkg.files) {
       if (!file.resolvedPath) {
+        continue
+      }
+      const linesToShow = changedLinesMap?.get(file.resolvedPath)
+      if (changedLinesMap && (!linesToShow || linesToShow.size === 0)) {
         continue
       }
       try {

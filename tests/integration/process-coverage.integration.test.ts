@@ -13,6 +13,7 @@ describe('processCoverage integration', () => {
         filePatterns: [path.join(testDir, 'coverage.xml')],
         sourceDir: testDir,
         excludePatterns: [],
+        numberOfSurroundingLines: 1,
       },
       createCliLogger(true),
     )
@@ -29,6 +30,7 @@ describe('processCoverage integration', () => {
         filePatterns: [path.join(testDir, 'coverage.xml')],
         sourceDir: testDir,
         excludePatterns: [],
+        numberOfSurroundingLines: 1,
       },
       createCliLogger(true),
     )
@@ -45,6 +47,7 @@ describe('processCoverage integration', () => {
         filePatterns: [path.join(testDir, 'coverage.xml')],
         sourceDir: testDir,
         excludePatterns: ['**/exclude/**'],
+        numberOfSurroundingLines: 1,
       },
       createCliLogger(true),
     )
@@ -66,6 +69,7 @@ describe('processCoverage integration', () => {
         filePatterns: [`${testDir}/coverage-a.xml`, `${testDir}/coverage-b.xml`],
         sourceDir: testDir,
         excludePatterns: [],
+        numberOfSurroundingLines: 1,
       },
       createCliLogger(true),
     )
@@ -80,6 +84,7 @@ describe('processCoverage integration', () => {
         filePatterns: ['/nonexistent/**/*.xml'],
         sourceDir: '.',
         excludePatterns: [],
+        numberOfSurroundingLines: 1,
       },
       createCliLogger(true),
     )

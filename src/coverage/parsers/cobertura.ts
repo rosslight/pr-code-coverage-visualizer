@@ -7,6 +7,7 @@ import type {
 } from '../model.js'
 import type { CoverageParser } from './types.js'
 import assert from "node:assert";
+import {ChangedLinesMap} from "../../filter/index.js";
 
 /**
  * XML structure types for Cobertura format
@@ -233,8 +234,22 @@ export class CoberturaCoverageParser implements CoverageParser {
     return CoberturaCoverageParser.calculateCoverage(lines)
   }
 
-  public static calculatePackageCoverage(packages: PackageCoverage[]): PercentageCoverageMetrics {
-    const lines = packages.flatMap(x => x.files.flatMap(xx => xx.lines))
+  public static calculatePackageCoverage(
+      packages: PackageCoverage[],
+      changedLinesMap: ChangedLinesMap | undefined = undefined
+  ): PercentageCoverageMetrics {
+    const lines = packages.flatMap(x => x.files.flatMap(xx => {
+      if (!xx.resolvedPath)
+        return xx.lines
+      const changedLines = changedLinesMap?.get(xx.resolvedPath)
+      if (!changedLines) {
+        return xx.lines
+      }
+      if (changedLines.size === 0) {
+        return []
+      }
+      return xx.lines.filter(xxx => changedLines.has(xxx.lineNumber))
+    }))
     return CoberturaCoverageParser.calculateCoverage(lines)
   }
 }

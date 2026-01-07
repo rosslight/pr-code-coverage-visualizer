@@ -1,6 +1,8 @@
+import assert from 'node:assert'
 import type { Logger } from '../core/index.js'
 import { CoberturaCoverageParser } from '../coverage/index.js'
 import type { FileCoverage, LineCoverage, PackageCoverage, PercentageCoverageMetrics } from '../coverage/model.js'
+import type { ChangedLinesMap } from '../filter/index.js'
 
 // =============================================================================
 // CONSTANTS
@@ -21,11 +23,8 @@ const FILE_STATUS_ICONS = {
   partialCoverage: '🟠',
 } as const
 
-/** Default maximum number of surrounding lines around an uncovered line */
-export const DEFAULT_MAX_NUMBER_OF_SURROUNDING_LINES = 1
-
 /** Default maximum characters for markdown output */
-export const DEFAULT_MAX_CHARACTERS = 65536
+export const DEFAULT_MAX_CHARACTERS = 10_000_000
 
 /** Minimum characters required for meaningful markdown output (badges + legend + notice) */
 export const MINIMUM_CHARACTERS = 900
@@ -36,10 +35,10 @@ export const MINIMUM_CHARACTERS = 900
 
 /** Options for markdown generation */
 export type MarkdownOptions = {
-  /** Number of lines to show before and after uncovered lines (default: 1) */
-  numberOfSurroundingLines?: number | undefined
-  /** Maximum number of characters in the output (default: 65536, minimum: 900) */
-  maxCharacters?: number | undefined
+  /** Number of lines to show before and after uncovered lines */
+  numberOfSurroundingLines: number
+  /** Maximum number of characters in the output (minimum: 900) */
+  maxCharacters: number | undefined
 }
 
 /** Data structure for a package section with its files */
@@ -75,6 +74,7 @@ type FileCoverageClassification = {
  * This is a pure function suitable for snapshot testing.
  *
  * @param packages - Array of packages
+ * @param changedLinesMap - The changed lines information
  * @param fileContents - Map of resolved (absolute) path to array of line contents
  * @param overallMetrics - The overall percentage metrics
  * @param options - Optional configuration for Markdown generation
@@ -84,12 +84,13 @@ type FileCoverageClassification = {
  */
 export function generateMarkdown(
   packages: PackageCoverage[],
+  changedLinesMap: ChangedLinesMap | undefined,
   fileContents: Map<string, string[]>,
   overallMetrics: PercentageCoverageMetrics,
-  options: MarkdownOptions = {},
+  options: MarkdownOptions,
   logger: Logger,
 ): string {
-  const numberOfSurroundingLines = options.numberOfSurroundingLines ?? DEFAULT_MAX_NUMBER_OF_SURROUNDING_LINES
+  const numberOfSurroundingLines = options.numberOfSurroundingLines
   const maxCharacters = options.maxCharacters ?? DEFAULT_MAX_CHARACTERS
 
   // Validate minimum character limit
@@ -108,7 +109,7 @@ export function generateMarkdown(
   const legend = generateLegend()
 
   // Step 2: Build package section data
-  const packageSections = buildPackageSections(packages, fileContents, numberOfSurroundingLines)
+  const packageSections = buildPackageSections(packages, changedLinesMap, fileContents, numberOfSurroundingLines)
 
   // Step 3: Sort packages
   sortPackages(packageSections)
@@ -204,13 +205,14 @@ function formatPercentOrNaFromRation(covered: number, total: number): string {
  */
 function buildPackageSections(
   packages: PackageCoverage[],
+  changedLinesMap: ChangedLinesMap | undefined,
   fileContents: Map<string, string[]>,
   numberOfSurroundingLines: number,
 ): PackageSectionData[] {
   const sections: PackageSectionData[] = []
 
   for (const pkg of packages) {
-    const sectionData = buildPackageSectionData(pkg, fileContents, numberOfSurroundingLines)
+    const sectionData = buildPackageSectionData(pkg, changedLinesMap, fileContents, numberOfSurroundingLines)
     if (sectionData !== null) {
       sections.push(sectionData)
     }
@@ -225,6 +227,7 @@ function buildPackageSections(
  */
 function buildPackageSectionData(
   pkg: PackageCoverage,
+  changedLinesMap: ChangedLinesMap | undefined,
   fileContents: Map<string, string[]>,
   numberOfSurroundingLines: number,
 ): PackageSectionData | null {
@@ -235,12 +238,13 @@ function buildPackageSectionData(
   const files: FileSectionData[] = []
 
   for (const file of pkg.files) {
+    const changedLines = file.resolvedPath ? changedLinesMap?.get(file.resolvedPath) : undefined
     const content = file.resolvedPath ? (fileContents.get(file.resolvedPath) ?? []) : []
     const classification = classifyFileCoverage(file)
 
     files.push({
       filename: file.filename,
-      content: renderFileSection(file, content, numberOfSurroundingLines, classification),
+      content: renderFileSection(file, changedLines, content, numberOfSurroundingLines, classification),
       uncoveredLines: file.coverage.totalLines - file.coverage.linesCovered,
       partialBranches: file.coverage.totalBranches - file.coverage.branchesCovered,
     })
@@ -357,7 +361,8 @@ function buildMarkdownWithinLimitFileLevel(
 
   // Process packages and files
   packageLoop: for (let p = 0; p < packageSections.length; p++) {
-    const pkg = packageSections[p]!
+    const pkg = packageSections[p]
+    assert(pkg)
 
     // Try to include package header
     if (!budget.tryAppend(`${pkg.header}\n`)) {
@@ -496,6 +501,7 @@ function getBadgeColor(percent: number): string {
  */
 function renderFileSection(
   file: FileCoverage,
+  linesToRender: Set<number> | undefined,
   fileLines: string[],
   numberOfSurroundingLines: number,
   classification: FileCoverageClassification,
@@ -521,7 +527,7 @@ function renderFileSection(
 
   const extension = getFileExtension(file.filename)
   lines.push(`\`\`\`${extension}`)
-  lines.push(renderAnnotatedLines(file.lines, fileLines, numberOfSurroundingLines))
+  lines.push(renderAnnotatedLines(file.lines, linesToRender, fileLines, numberOfSurroundingLines))
   lines.push('```')
   lines.push('</details>')
 
@@ -573,6 +579,7 @@ function getFileExtension(filename: string): string {
  */
 function renderAnnotatedLines(
   coverageLines: LineCoverage[],
+  linesToRender: Set<number> | undefined,
   fileLines: string[],
   numberOfSurroundingLines: number,
 ): string {
@@ -592,9 +599,13 @@ function renderAnnotatedLines(
   const interestingLineNumbers = new Set<number>()
   for (const line of sortedLines) {
     const branchesCovered = line.branchesCovered === line.totalBranches
-    if (!line.covered || !branchesCovered) {
-      interestingLineNumbers.add(line.lineNumber)
+    if (line.covered && branchesCovered) {
+      continue
     }
+    if (linesToRender && !linesToRender.has(line.lineNumber)) {
+      continue
+    }
+    interestingLineNumbers.add(line.lineNumber)
   }
 
   // Expand to include context lines around interesting lines

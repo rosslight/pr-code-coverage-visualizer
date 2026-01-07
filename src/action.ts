@@ -41,6 +41,8 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
       excludePatterns,
       baseSha: shas?.baseSha,
       headSha: shas?.headSha,
+      maxCharacters: 65536,
+      numberOfSurroundingLines: 1,
     },
     actionLogger,
   )

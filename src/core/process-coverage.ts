@@ -134,29 +134,24 @@ export async function processCoverage(
     }
   }
 
-  // Apply filters to the coverage report
+  // Filter files to exclude
   const globFilteredPackages: PackageCoverage[] = filterByGlob(mergedPackages, inputs.excludePatterns, logger)
+  const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages)
+  logger.info(
+      `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
+  )
+
+  // Filter git changes
   const fileFilteredPackages = changedLinesPerFileMap
     ? filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger)
     : globFilteredPackages
+  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(fileFilteredPackages)
+  logger.info(
+      `Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`,
+  )
 
   // Read file contents from disk using resolved paths
   const fileContents = await readFileContents(fileFilteredPackages)
-
-  for (const filteredPackage of fileFilteredPackages) {
-    for (const file of filteredPackage.files) {
-      logger.debug?.(`Generating markdown for ${file.resolvedPath} with ${file.lines.length} changed lines`)
-    }
-  }
-
-  const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages)
-  const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(fileFilteredPackages)
-  logger.info(
-    `Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`,
-  )
-  logger.info(
-    `Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`,
-  )
 
   // Generate Markdown from filtered report
   const markdown = generateMarkdown(

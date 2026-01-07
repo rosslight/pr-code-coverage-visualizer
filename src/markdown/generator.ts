@@ -97,6 +97,12 @@ export function generateMarkdown(
     throw new Error(`maxCharacters must be at least ${MINIMUM_CHARACTERS}, got ${maxCharacters}`)
   }
 
+  for (const filteredPackage of packages) {
+    for (const file of filteredPackage.files) {
+      logger.debug?.(`Generating markdown for ${file.resolvedPath} with ${file.lines.length} changed lines`)
+    }
+  }
+
   // Step 1: Generate fixed content (badges and legend)
   const badges = generateCoverageBadges(overallMetrics)
   const legend = generateLegend()

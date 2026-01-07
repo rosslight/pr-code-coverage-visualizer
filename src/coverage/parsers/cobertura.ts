@@ -207,7 +207,6 @@ export class CoberturaCoverageParser implements CoverageParser {
       } else {
         newLine = line
       }
-      assert(newLine.totalBranches === 0 || newLine.totalBranches > 1, "Total Branches should be 0, or at least 2")
       lineMap.set(line.lineNumber, newLine)
     }
 

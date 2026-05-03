@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/rosslight/pr-code-coverage-visualizer/compare/v2.2.0...v2.2.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* Catch errors when adding a github comment and write to the step summary instead ([#15](https://github.com/rosslight/pr-code-coverage-visualizer/issues/15)) ([b0681fe](https://github.com/rosslight/pr-code-coverage-visualizer/commit/b0681fe0699c96d118f030dffcd0f1130b45bcb9))
+
 ## [2.2.0](https://github.com/rosslight/pr-code-coverage-visualizer/compare/v2.1.0...v2.2.0) (2026-01-06)
 
 

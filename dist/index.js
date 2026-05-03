@@ -62983,7 +62983,6 @@ class CoberturaCoverageParser {
             else {
                 newLine = line;
             }
-            external_node_assert_default()(newLine.totalBranches === 0 || newLine.totalBranches > 1, "Total Branches should be 0, or at least 2");
             lineMap.set(line.lineNumber, newLine);
         }
         return Array.from(lineMap.values()).sort((a, b) => a.lineNumber - b.lineNumber);
@@ -63340,6 +63339,11 @@ function generateMarkdown(packages, fileContents, overallMetrics, options = {}, 
     // Validate minimum character limit
     if (maxCharacters < MINIMUM_CHARACTERS) {
         throw new Error(`maxCharacters must be at least ${MINIMUM_CHARACTERS}, got ${maxCharacters}`);
+    }
+    for (const filteredPackage of packages) {
+        for (const file of filteredPackage.files) {
+            logger.debug?.(`Generating markdown for ${file.resolvedPath} with ${file.lines.length} changed lines`);
+        }
     }
     // Step 1: Generate fixed content (badges and legend)
     const badges = generateCoverageBadges(overallMetrics);
@@ -63929,22 +63933,18 @@ async function processCoverage(inputs, logger) {
             logger.warning(`Failed to get changed lines from git (comparing ${baseSha}..${headSha}): ${error}. Showing all lines.`);
         }
     }
-    // Apply filters to the coverage report
+    // Filter files to exclude
     const globFilteredPackages = filterByGlob(mergedPackages, inputs.excludePatterns, logger);
+    const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages);
+    logger.info(`Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`);
+    // Filter git changes
     const fileFilteredPackages = changedLinesPerFileMap
         ? filterByChangedLines(globFilteredPackages, changedLinesPerFileMap, logger)
         : globFilteredPackages;
+    const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(fileFilteredPackages);
+    logger.info(`Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`);
     // Read file contents from disk using resolved paths
     const fileContents = await readFileContents(fileFilteredPackages);
-    for (const filteredPackage of fileFilteredPackages) {
-        for (const file of filteredPackage.files) {
-            logger.debug?.(`Generating markdown for ${file.resolvedPath} with ${file.lines.length} changed lines`);
-        }
-    }
-    const overallMetrics = CoberturaCoverageParser.calculatePackageCoverage(globFilteredPackages);
-    const prMetrics = CoberturaCoverageParser.calculatePackageCoverage(fileFilteredPackages);
-    logger.info(`Calculated overall metrics (LineCoverage: ${overallMetrics.lineCoverage}, BranchCoverage: ${overallMetrics.branchCoverage})`);
-    logger.info(`Calculated PR metrics (LineCoverage: ${prMetrics.lineCoverage}, BranchCoverage: ${prMetrics.branchCoverage})`);
     // Generate Markdown from filtered report
     const markdown = generateMarkdown(fileFilteredPackages, fileContents, overallMetrics, { maxCharacters: inputs.maxCharacters, numberOfSurroundingLines: inputs.numberOfSurroundingLines }, logger);
     return {
@@ -64065,6 +64065,16 @@ const actionLogger = {
     warning: (message) => core.warning(message),
     debug: (message) => core.debug(message),
 };
+const formatCommentError = (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (typeof error === 'object' && error !== null && 'status' in error) {
+        const status = error.status;
+        if (typeof status === 'number' || typeof status === 'string') {
+            return `status ${status}: ${message}`;
+        }
+    }
+    return message;
+};
 const run = async (inputs, octokit, context) => {
     const shas = (0,github/* getComparisonShas */.br)(context);
     const excludePatterns = inputs.excludeFilesPattern
@@ -64100,14 +64110,22 @@ const run = async (inputs, octokit, context) => {
         return;
     }
     // Post or update comment
-    const { url, updated } = await (0,github/* postComment */.Gy)(octokit, context, pullNumber, markdown, inputs.updateComment);
-    if (updated) {
-        core.info(`Updated existing comment: ${url}`);
+    try {
+        const { url, updated } = await (0,github/* postComment */.Gy)(octokit, context, pullNumber, markdown, inputs.updateComment);
+        if (updated) {
+            core.info(`Updated existing comment: ${url}`);
+        }
+        else {
+            core.info(`Created new comment: ${url}`);
+        }
+        core.info('Coverage visualization posted successfully');
     }
-    else {
-        core.info(`Created new comment: ${url}`);
+    catch (error) {
+        core.warning(`Failed to post or update PR comment (${formatCommentError(error)}). Falling back to the step summary instead.`);
+        await core.summary.addRaw(markdown).write();
+        core.info('Coverage visualization written to step summary');
+        return;
     }
-    core.info('Coverage visualization posted successfully');
 };
 
 

@@ -34,5 +34,5 @@
     "node": "24.x"
   },
   "packageManager": "pnpm@10.26.1",
-  "version": "2.2.0"
+  "version": "2.2.1"
 }

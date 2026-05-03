@@ -3,6 +3,7 @@
 This is a github action which is supposed to be run for a PR and visualizes the test coverage.
 
 Everytime this action is run, we add a comment to the PR showing the current coverage.
+If GitHub does not allow creating or updating a PR comment, the action falls back to the step summary instead.
 
 If the trigger is not `pull_request`, this action does nothing. Also, if the length of the comment would exceed the GitHub limit, lines are trunctuated.
 
@@ -20,6 +21,7 @@ on: pull_request
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 jobs:

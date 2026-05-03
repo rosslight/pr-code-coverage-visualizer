@@ -20,6 +20,19 @@ const actionLogger: Logger = {
   debug: (message) => core.debug(message),
 }
 
+const formatCommentError = (error: unknown): string => {
+  const message = error instanceof Error ? error.message : String(error)
+
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = error.status
+    if (typeof status === 'number' || typeof status === 'string') {
+      return `status ${status}: ${message}`
+    }
+  }
+
+  return message
+}
+
 export const run = async (inputs: Inputs, octokit: Octokit, context: Context): Promise<void> => {
   const shas = getComparisonShas(context)
 
@@ -67,13 +80,22 @@ export const run = async (inputs: Inputs, octokit: Octokit, context: Context): P
   }
 
   // Post or update comment
-  const { url, updated } = await postComment(octokit, context, pullNumber, markdown, inputs.updateComment)
+  try {
+    const { url, updated } = await postComment(octokit, context, pullNumber, markdown, inputs.updateComment)
 
-  if (updated) {
-    core.info(`Updated existing comment: ${url}`)
-  } else {
-    core.info(`Created new comment: ${url}`)
+    if (updated) {
+      core.info(`Updated existing comment: ${url}`)
+    } else {
+      core.info(`Created new comment: ${url}`)
+    }
+
+    core.info('Coverage visualization posted successfully')
+  } catch (error) {
+    core.warning(
+      `Failed to post or update PR comment (${formatCommentError(error)}). Falling back to the step summary instead.`,
+    )
+    await core.summary.addRaw(markdown).write()
+    core.info('Coverage visualization written to step summary')
+    return
   }
-
-  core.info('Coverage visualization posted successfully')
 }

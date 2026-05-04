@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createCliLogger } from '../../src/core/process-coverage.js'
+import { CoberturaCoverageParser } from '../../src/coverage/index.js'
 import type { PackageCoverage, PercentageCoverageMetrics } from '../../src/coverage/model.js'
 import { generateMarkdown, MINIMUM_CHARACTERS } from '../../src/markdown/index.js'
-import { CoberturaCoverageParser } from '../../src/coverage/index.js'
 
 type FakeFileInfo = {
   resolvedPath: string
@@ -68,9 +68,10 @@ describe('generateMarkdown', () => {
 
     const markdown = generateMarkdown(
       packages,
+      undefined,
       createFakeFileContents([{ resolvedPath: '/repo/src/example.ts', numberOfLines: 10 }]),
       CoberturaCoverageParser.calculatePackageCoverage(packages),
-      {},
+      { numberOfSurroundingLines: 1, maxCharacters: undefined },
       logger,
     )
 
@@ -114,12 +115,13 @@ describe('generateMarkdown', () => {
 
     const markdown = generateMarkdown(
       packages,
+      undefined,
       createFakeFileContents([
         { resolvedPath: '/repo/src/core/utils.cs', numberOfLines: 15 },
         { resolvedPath: '/repo/tests/test_utils.cs', numberOfLines: 10 },
       ]),
       CoberturaCoverageParser.calculatePackageCoverage(packages),
-      {},
+      { numberOfSurroundingLines: 1, maxCharacters: undefined },
       logger,
     )
 
@@ -152,9 +154,10 @@ describe('generateMarkdown', () => {
 
     const markdown = generateMarkdown(
       packages,
+      undefined,
       createFakeFileContents([{ resolvedPath: '/repo/src/gaps.rs', numberOfLines: 50 }]),
       CoberturaCoverageParser.calculatePackageCoverage(packages),
-      {},
+      { numberOfSurroundingLines: 1, maxCharacters: undefined },
       logger,
     )
 
@@ -173,9 +176,10 @@ describe('generateMarkdown', () => {
 
     const markdown = generateMarkdown(
       packages,
+      undefined,
       createFakeFileContents([]),
       CoberturaCoverageParser.calculatePackageCoverage(packages),
-      {},
+      { numberOfSurroundingLines: 1, maxCharacters: undefined },
       logger,
     )
 
@@ -213,12 +217,13 @@ describe('generateMarkdown', () => {
 
     const markdown = generateMarkdown(
       packages,
+      undefined,
       createFakeFileContents([
         { resolvedPath: '/repo/src/file1.py', numberOfLines: 3 },
         { resolvedPath: '/repo/src/file2.py', numberOfLines: 6 },
       ]),
       CoberturaCoverageParser.calculatePackageCoverage(packages),
-      {},
+      { numberOfSurroundingLines: 1, maxCharacters: undefined },
       logger,
     )
 
@@ -255,13 +260,14 @@ describe('generateMarkdown', () => {
 
     const markdown = generateMarkdown(
       packages,
+      undefined,
       createFakeFileContents([
         { resolvedPath: '/repo/test.cs', numberOfLines: 1 },
         { resolvedPath: '/repo/test.rs', numberOfLines: 2 },
         { resolvedPath: '/repo/test.tsx', numberOfLines: 3 },
       ]),
       CoberturaCoverageParser.calculatePackageCoverage(packages),
-      {},
+      { numberOfSurroundingLines: 1, maxCharacters: undefined },
       logger,
     )
 
@@ -293,9 +299,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -325,9 +332,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 10 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -359,9 +367,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -395,9 +404,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 15 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -428,9 +438,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 6 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -461,9 +472,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/src/test.ts', numberOfLines: 5 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -496,9 +508,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         fileContents,
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -528,9 +541,10 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/src/short.ts', numberOfLines: 3 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -558,9 +572,11 @@ describe('generateMarkdown', () => {
       expect(() =>
         generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([{ resolvedPath: '/repo/a.ts', numberOfLines: 1 }]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
           {
+            numberOfSurroundingLines: 1,
             maxCharacters: 100,
           },
           logger,
@@ -586,9 +602,11 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/small.ts', numberOfLines: 2 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
         {
+          numberOfSurroundingLines: 1,
           maxCharacters: 2000,
         },
         logger,
@@ -628,13 +646,17 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([
           { resolvedPath: '/repo/file1.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file2.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file3.ts', numberOfLines: 2 },
         ]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        { maxCharacters: 1000 },
+        {
+          numberOfSurroundingLines: 1,
+          maxCharacters: 1000,
+        },
         logger,
       )
 
@@ -688,13 +710,17 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([
           { resolvedPath: '/repo/pkg1/a.ts', numberOfLines: 5 },
           { resolvedPath: '/repo/pkg2/b.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/pkg3/c.ts', numberOfLines: 2 },
         ]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        { maxCharacters: 900 },
+        {
+          numberOfSurroundingLines: 1,
+          maxCharacters: 900,
+        },
         logger,
       )
 
@@ -740,6 +766,7 @@ describe('generateMarkdown', () => {
 
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([
           { resolvedPath: '/repo/file1.ts', numberOfLines: 2 },
           { resolvedPath: '/repo/file2.ts', numberOfLines: 2 },
@@ -747,7 +774,10 @@ describe('generateMarkdown', () => {
           { resolvedPath: '/repo/file4.ts', numberOfLines: 2 },
         ]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        { maxCharacters: 1000 },
+        {
+          numberOfSurroundingLines: 1,
+          maxCharacters: 1000,
+        },
         logger,
       )
 
@@ -778,9 +808,10 @@ describe('generateMarkdown', () => {
       // Should not throw and should not truncate small content
       const markdown = generateMarkdown(
         packages,
+        undefined,
         createFakeFileContents([{ resolvedPath: '/repo/test.ts', numberOfLines: 2 }]),
         CoberturaCoverageParser.calculatePackageCoverage(packages),
-        {},
+        { numberOfSurroundingLines: 1, maxCharacters: undefined },
         logger,
       )
 
@@ -825,12 +856,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/low.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high.ts', numberOfLines: 4 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -870,12 +902,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/low.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high.ts', numberOfLines: 3 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -912,12 +945,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -950,12 +984,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/uncovered.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/covered.ts', numberOfLines: 2 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -990,12 +1025,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/low-uncovered.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high-uncovered.ts', numberOfLines: 4 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -1029,12 +1065,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/low-partial.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/high-partial.ts', numberOfLines: 3 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -1065,12 +1102,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -1116,6 +1154,7 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/covered.ts', numberOfLines: 2 },
@@ -1123,7 +1162,7 @@ describe('generateMarkdown', () => {
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
@@ -1154,12 +1193,13 @@ describe('generateMarkdown', () => {
 
         const markdown = generateMarkdown(
           packages,
+          undefined,
           createFakeFileContents([
             { resolvedPath: '/repo/zebra.ts', numberOfLines: 2 },
             { resolvedPath: '/repo/alpha.ts', numberOfLines: 2 },
           ]),
           CoberturaCoverageParser.calculatePackageCoverage(packages),
-          {},
+          { numberOfSurroundingLines: 1, maxCharacters: undefined },
           logger,
         )
 
